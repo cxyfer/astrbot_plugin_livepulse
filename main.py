@@ -21,7 +21,7 @@ from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
 from core.store import Store
 from i18n import I18nManager
-from platforms.base import DEFAULT_USER_AGENT, RateLimitError
+from platforms.base import RateLimitError
 from platforms.bilibili import BilibiliChecker
 from platforms.twitch import TwitchChecker
 from platforms.youtube import YouTubeChecker
@@ -57,7 +57,9 @@ class LivePulsePlugin(Star):
         data = self._persistence.load()
         self._store.load(data)
 
-        self._session = aiohttp.ClientSession(headers={"User-Agent": DEFAULT_USER_AGENT})
+        self._session = aiohttp.ClientSession(headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        })
 
         self._checkers["youtube"] = YouTubeChecker(timeout=self.config.get("youtube_timeout", 20))
         self._checkers["bilibili"] = BilibiliChecker(timeout=self.config.get("bilibili_timeout", 10))
