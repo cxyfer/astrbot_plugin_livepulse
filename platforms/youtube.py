@@ -7,9 +7,9 @@ from aiohttp import ClientSession, ClientTimeout
 from astrbot.api import logger
 
 from core.models import StatusSnapshot, ChannelInfo
+from platforms import DEFAULT_USER_AGENT
 from platforms.base import BasePlatformChecker, RateLimitError
 
-_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 _STREAMS_URL = "https://www.youtube.com/channel/{channel_id}/streams"
 _HANDLE_URL = "https://www.youtube.com/{handle}"
 _EXTERNAL_ID_RE = re.compile(r'"externalId"\s*:\s*"(UC[\w-]{22})"')
@@ -40,7 +40,7 @@ class YouTubeChecker(BasePlatformChecker):
 
     async def _check_single(self, channel_id: str, session: ClientSession) -> StatusSnapshot:
         url = _STREAMS_URL.format(channel_id=channel_id)
-        headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
+        headers = {"User-Agent": DEFAULT_USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
             if resp.status == 429:
                 raise RateLimitError("youtube")
@@ -124,7 +124,7 @@ class YouTubeChecker(BasePlatformChecker):
 
     async def _resolve_handle(self, handle: str, session: ClientSession) -> tuple[str, str] | None:
         url = _HANDLE_URL.format(handle=handle)
-        headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
+        headers = {"User-Agent": DEFAULT_USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
             async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
                 if resp.status != 200:
@@ -150,7 +150,7 @@ class YouTubeChecker(BasePlatformChecker):
 
     async def _get_channel_name(self, channel_id: str, session: ClientSession) -> str | None:
         url = f"https://www.youtube.com/channel/{channel_id}"
-        headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
+        headers = {"User-Agent": DEFAULT_USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
             async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
                 if resp.status != 200:
@@ -163,4 +163,4 @@ class YouTubeChecker(BasePlatformChecker):
 
 
 def _is_blocked(html: str) -> bool:
-    return "captcha" in html.lower() or "unusual traffic" in html.lower()
+    return "unusual traffic" in html.lower()

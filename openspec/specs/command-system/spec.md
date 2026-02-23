@@ -41,6 +41,12 @@ The system SHALL provide `/live add <platform> <channel_id>` to add a monitor to
 - **WHEN** the channel being added is currently live
 - **THEN** the system SHALL record the current status as live but SHALL NOT send a live-start notification
 
+#### Scenario: Add monitor when platform is rate-limited
+- **WHEN** user sends `/live add <platform> <channel_id>`
+- **AND** the platform returns a rate-limit response during channel validation
+- **THEN** the system SHALL respond with the `error.rate_limited` message including the platform name
+- **AND** the system SHALL NOT respond with "channel not found"
+
 ### Requirement: /live remove command
 The system SHALL provide `/live remove <platform> <channel_id>` to remove a monitor from the current group.
 

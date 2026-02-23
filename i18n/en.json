@@ -30,5 +30,6 @@
   "cmd.status.groups": "Groups: {count}",
   "notify.live_start": "🔴 {name} is now LIVE on {platform}!\n{title}\n{category}\n{url}",
   "notify.live_end": "⚫ {name} has ended the stream on {platform}.",
-  "error.generic": "An error occurred: {error}"
+  "error.generic": "An error occurred: {error}",
+  "error.rate_limited": "{platform} is currently rate-limiting requests. Please try again later."
 }

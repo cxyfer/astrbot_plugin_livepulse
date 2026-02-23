@@ -21,6 +21,8 @@ from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
 from core.store import Store
 from i18n import I18nManager
+from platforms import DEFAULT_USER_AGENT
+from platforms.base import RateLimitError
 from platforms.bilibili import BilibiliChecker
 from platforms.twitch import TwitchChecker
 from platforms.youtube import YouTubeChecker
@@ -56,7 +58,7 @@ class LivePulsePlugin(Star):
         data = self._persistence.load()
         self._store.load(data)
 
-        self._session = aiohttp.ClientSession()
+        self._session = aiohttp.ClientSession(headers={"User-Agent": DEFAULT_USER_AGENT})
 
         self._checkers["youtube"] = YouTubeChecker(timeout=self.config.get("youtube_timeout", 20))
         self._checkers["bilibili"] = BilibiliChecker(timeout=self.config.get("bilibili_timeout", 10))
@@ -148,6 +150,9 @@ class LivePulsePlugin(Star):
 
         try:
             info = await checker.validate_channel(channel_id, self._session)
+        except RateLimitError as e:
+            yield event.plain_result(self._t(event, "error.rate_limited", platform=e.platform))
+            return
         except Exception as e:
             logger.warning(f"validate_channel failed for {platform}/{channel_id}: {e}")
             yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=channel_id))
