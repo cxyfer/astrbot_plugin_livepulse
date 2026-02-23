@@ -2,5 +2,5 @@ name: astrbot_plugin_livepulse
 display_name: LivePulse
 desc: Multi-platform live stream monitor for YouTube, Twitch, and Bilibili.
 version: v1.0.0
-author: Usaya
-repo: https://github.com/usaya/astrbot_plugin_livepulse
+author: Xyfer
+repo: https://github.com/cxyfer/astrbot_plugin_livepulse
