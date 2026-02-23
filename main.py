@@ -153,7 +153,10 @@ class LivePulsePlugin(Star):
             yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=channel_id))
             return
         if info is None:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=channel_id))
+            if platform == "bilibili" and not channel_id.isdigit() and "live.bilibili.com" not in channel_id:
+                yield event.plain_result(self._t(event, "cmd.add.bilibili_hint"))
+            else:
+                yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=channel_id))
             return
 
         max_per_group = self.config.get("max_monitors_per_group", 30)
@@ -215,13 +218,25 @@ class LivePulsePlugin(Star):
             yield event.plain_result(self._t(event, "cmd.add.twitch_no_creds"))
             return
 
+        if platform == "youtube" and channel_id.startswith("@"):
+            try:
+                info = await checker.validate_channel(channel_id, self._session)
+            except Exception:
+                info = None
+            if info is None:
+                yield event.plain_result(self._t(event, "cmd.check.unknown", platform=platform, channel_id=channel_id))
+                return
+            resolved_id = info.channel_id
+        else:
+            resolved_id = channel_id
+
         try:
-            statuses = await checker.check_status([channel_id], self._session)
+            statuses = await checker.check_status([resolved_id], self._session)
         except Exception as e:
             yield event.plain_result(self._t(event, "error.generic", error=str(e)))
             return
 
-        snap = statuses.get(channel_id)
+        snap = statuses.get(resolved_id)
         if snap is None:
             yield event.plain_result(self._t(event, "cmd.check.unknown", platform=platform, channel_id=channel_id))
             return

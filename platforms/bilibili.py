@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from aiohttp import ClientSession, ClientTimeout
 
 from astrbot.api import logger
@@ -8,6 +10,8 @@ from core.models import StatusSnapshot, ChannelInfo
 from platforms.base import BasePlatformChecker, RateLimitError
 
 _API_URL = "https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids"
+_BILI_URL_RE = re.compile(r"(?:https?://)?live\.bilibili\.com/(\d+)")
+_ROOM_INFO_URL = "https://api.live.bilibili.com/room/v1/Room/get_info"
 _CHUNK_SIZE = 50
 
 
@@ -62,23 +66,47 @@ class BilibiliChecker(BasePlatformChecker):
                 )
         return results
 
-    async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+    async def _resolve_room_id(self, room_id: str, session: ClientSession) -> str | None:
         try:
-            int(channel_id)
-        except ValueError:
-            return None
-        try:
-            async with session.post(_API_URL, json={"uids": [int(channel_id)]}, timeout=self._timeout) as resp:
+            async with session.get(_ROOM_INFO_URL, params={"room_id": room_id}, timeout=self._timeout) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
         except Exception as e:
-            logger.warning(f"Bilibili validate failed for {channel_id}: {e}")
+            logger.warning(f"Bilibili room resolve failed for {room_id}: {e}")
             return None
-        info = data.get("data", {}).get(str(channel_id))
+        uid = data.get("data", {}).get("uid")
+        return str(uid) if uid is not None else None
+
+    async def _validate_uid(self, uid: str, session: ClientSession) -> ChannelInfo | None:
+        try:
+            uid_int = int(uid)
+        except ValueError:
+            return None
+        uid_str = str(uid_int)
+        try:
+            async with session.post(_API_URL, json={"uids": [uid_int]}, timeout=self._timeout) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+        except Exception as e:
+            logger.warning(f"Bilibili validate failed for {uid_str}: {e}")
+            return None
+        info = data.get("data", {}).get(uid_str)
         if info is None:
             return None
         return ChannelInfo(
-            channel_id=channel_id,
-            channel_name=info.get("uname", channel_id),
+            channel_id=uid_str,
+            channel_name=info.get("uname", uid_str),
             platform="bilibili",
         )
+
+    async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+        url_match = _BILI_URL_RE.search(channel_id)
+        if url_match:
+            room_id = url_match.group(1)
+            uid = await self._resolve_room_id(room_id, session)
+            if uid is None:
+                return None
+            return await self._validate_uid(uid, session)
+        if channel_id.isdigit():
+            return await self._validate_uid(channel_id, session)
+        return None

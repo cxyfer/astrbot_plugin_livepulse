@@ -10,11 +10,14 @@ from core.models import StatusSnapshot, ChannelInfo
 from platforms.base import BasePlatformChecker, RateLimitError
 
 _USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-_LIVE_URL = "https://www.youtube.com/channel/{channel_id}/live"
+_STREAMS_URL = "https://www.youtube.com/channel/{channel_id}/streams"
 _HANDLE_URL = "https://www.youtube.com/{handle}"
-_CHANNEL_ID_RE = re.compile(r'"channelId"\s*:\s*"(UC[\w-]{22})"')
-_TITLE_RE = re.compile(r'"title"\s*:\s*"([^"]+)"')
-_THUMB_RE = re.compile(r'"thumbnail"\s*:\s*\{\s*"thumbnails"\s*:\s*\[\s*\{[^}]*"url"\s*:\s*"([^"]+)"')
+_EXTERNAL_ID_RE = re.compile(r'"externalId"\s*:\s*"(UC[\w-]{22})"')
+_OG_URL_CID_RE = re.compile(
+    r'<meta\s+property="og:url"\s+content="https://www\.youtube\.com/channel/(UC[\w-]{22})"',
+    re.I,
+)
+_OG_TITLE_RE = re.compile(r'<meta\s+property="og:title"\s+content="([^"]+)"', re.I)
 
 
 class YouTubeChecker(BasePlatformChecker):
@@ -36,7 +39,7 @@ class YouTubeChecker(BasePlatformChecker):
         return results
 
     async def _check_single(self, channel_id: str, session: ClientSession) -> StatusSnapshot:
-        url = _LIVE_URL.format(channel_id=channel_id)
+        url = _STREAMS_URL.format(channel_id=channel_id)
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
             if resp.status == 429:
@@ -48,28 +51,63 @@ class YouTubeChecker(BasePlatformChecker):
         if _is_blocked(html):
             raise RateLimitError("youtube")
 
-        is_live = '"isLive":true' in html or "hqdefault_live.jpg" in html
-
-        name_match = re.search(r'"author"\s*:\s*"([^"]+)"', html)
+        name_match = _OG_TITLE_RE.search(html)
         name = name_match.group(1) if name_match else channel_id
 
+        live_marker = '"style":"LIVE"'
+        search_pos = 0
+        video_id = ""
         title = ""
-        title_match = _TITLE_RE.search(html)
-        if title_match:
-            title = title_match.group(1)
-
         thumb = ""
-        thumb_match = _THUMB_RE.search(html)
-        if thumb_match:
-            thumb = thumb_match.group(1)
+
+        while True:
+            live_pos = html.find(live_marker, search_pos)
+            if live_pos == -1:
+                break
+
+            renderer_start = html.rfind('"videoRenderer"', 0, live_pos)
+            if renderer_start == -1:
+                search_pos = live_pos + len(live_marker)
+                continue
+
+            renderer_end = html.find('"videoRenderer"', live_pos + len(live_marker))
+            if renderer_end == -1:
+                renderer_end = len(html)
+            renderer = html[renderer_start:renderer_end]
+
+            video_match = re.search(r'"videoId"\s*:\s*"([^"]+)"', renderer)
+            if video_match is None:
+                search_pos = live_pos + len(live_marker)
+                continue
+
+            video_id = video_match.group(1)
+            title_match = re.search(
+                r'"title"\s*:\s*\{\s*"runs"\s*:\s*\[\s*\{\s*"text"\s*:\s*"([^"]+)"',
+                renderer,
+            )
+            if title_match:
+                title = title_match.group(1)
+
+            thumb_match = re.search(
+                r'"thumbnail"\s*:\s*\{\s*"thumbnails"\s*:\s*\[\s*\{[^}]*"url"\s*:\s*"([^"]+)"',
+                renderer,
+            )
+            if thumb_match:
+                thumb = thumb_match.group(1)
+            break
+
+        if not video_id:
+            return StatusSnapshot(is_live=False, streamer_name=name)
+
+        stream_url = f"https://www.youtube.com/watch?v={video_id}"
 
         return StatusSnapshot(
-            is_live=is_live,
-            stream_id=channel_id if is_live else "",
-            title=title if is_live else "",
-            thumbnail_url=thumb if is_live else "",
+            is_live=True,
+            stream_id=video_id,
+            title=title,
+            thumbnail_url=thumb,
             streamer_name=name,
-            stream_url=url if is_live else "",
+            stream_url=stream_url,
         )
 
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
@@ -96,17 +134,22 @@ class YouTubeChecker(BasePlatformChecker):
             logger.warning(f"YouTube handle resolution failed for {handle}: {e}")
             return None
 
-        cid_match = _CHANNEL_ID_RE.search(html)
+        if _is_blocked(html):
+            raise RateLimitError("youtube")
+
+        cid_match = _EXTERNAL_ID_RE.search(html)
+        if cid_match is None:
+            cid_match = _OG_URL_CID_RE.search(html)
         if cid_match is None:
             return None
         channel_id = cid_match.group(1)
 
-        name_match = re.search(r'"author"\s*:\s*"([^"]+)"', html)
+        name_match = _OG_TITLE_RE.search(html)
         name = name_match.group(1) if name_match else handle
         return channel_id, name
 
     async def _get_channel_name(self, channel_id: str, session: ClientSession) -> str | None:
-        url = _LIVE_URL.format(channel_id=channel_id)
+        url = f"https://www.youtube.com/channel/{channel_id}"
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
             async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
@@ -115,7 +158,7 @@ class YouTubeChecker(BasePlatformChecker):
                 html = await resp.text()
         except Exception:
             return None
-        name_match = re.search(r'"author"\s*:\s*"([^"]+)"', html)
+        name_match = _OG_TITLE_RE.search(html)
         return name_match.group(1) if name_match else channel_id
 
 

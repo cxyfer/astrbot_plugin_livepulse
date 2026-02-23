@@ -3,6 +3,7 @@
   "cmd.add.duplicate": "監控已存在：{name}（{channel_id}）",
   "cmd.add.invalid_platform": "無效平台：{platform}。可用：youtube、twitch、bilibili",
   "cmd.add.invalid_channel": "找不到頻道：{channel_id}",
+  "cmd.add.bilibili_hint": "Bilibili 需要數字 UID 或直播間連結（如 live.bilibili.com/60989），暫不支援使用者名稱搜尋。",
   "cmd.add.limit_group": "群組監控數已達上限（{limit}）",
   "cmd.add.limit_global": "全域頻道數已達上限（{limit}）",
   "cmd.add.twitch_no_creds": "Twitch 憑證未設定，請在 WebUI 中設定 client_id 和 client_secret。",
