@@ -15,7 +15,7 @@
   "cmd.check.offline": "{name} 当前未在 {platform} 直播",
   "cmd.check.unknown": "无法确定 {platform} 上 {channel_id} 的状态",
   "cmd.lang.success": "语言已设置为 {lang}",
-  "cmd.lang.invalid": "无效语言：{lang}。可用：en、zh",
+  "cmd.lang.invalid": "无效语言：{lang}。可用：en、zh-Hans、zh-Hant",
   "cmd.notify.enabled": "已启用本群通知",
   "cmd.notify.disabled": "已禁用本群通知",
   "cmd.notify.invalid": "无效选项：{value}。请使用 on 或 off",

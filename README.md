@@ -7,7 +7,7 @@ AstrBot plugin for monitoring live streams on YouTube, Twitch, and Bilibili. Sen
 - **Multi-platform** — YouTube (HTML scraping), Twitch (Helix API), Bilibili (batch API)
 - **Per-group isolation** — each group manages its own monitors, language, and notification settings
 - **Smart polling** — per-platform independent polling with deduplication, exponential backoff, and rate limit handling
-- **i18n** — English and Chinese, switchable per group
+- **i18n** — English, Simplified Chinese, Traditional Chinese, switchable per group
 - **Reliable persistence** — atomic JSON writes with crash recovery and `.bak` fallback
 - **Auto-disable** — notifications auto-disabled after 10 consecutive delivery failures
 
@@ -51,7 +51,7 @@ All commands are under the `/live` command group.
 | `/live remove <platform> <channel_id>` | Remove a monitor |
 | `/live list` | List monitors with current status |
 | `/live check <platform> <channel_id>` | One-off status check |
-| `/live lang <en\|zh>` | Switch response language |
+| `/live lang <en\|zh-Hans\|zh-Hant>` | Switch response language |
 | `/live notify <on\|off>` | Toggle live-start notifications |
 | `/live end_notify <on\|off>` | Toggle end-of-stream notifications |
 | `/live status` | Show plugin health and stats |
@@ -64,7 +64,7 @@ All commands are under the `/live` command group.
 /live add twitch shroud
 /live add bilibili 672328094
 /live list
-/live lang zh
+/live lang zh-Hant
 ```
 
 ## Architecture
@@ -85,7 +85,8 @@ astrbot_plugin_livepulse/
 │   └── bilibili.py      # Bilibili batch API
 └── i18n/
     ├── en.json          # English strings
-    └── zh.json          # Chinese strings
+    ├── zh-Hans.json     # Simplified Chinese strings
+    └── zh-Hant.json     # Traditional Chinese strings
 ```
 
 ## License

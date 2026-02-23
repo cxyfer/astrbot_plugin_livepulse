@@ -25,7 +25,7 @@
     "default": 180
   },
   "default_language": {
-    "description": "Default language for new groups (en / zh)",
+    "description": "Default language for new groups (en / zh-Hans / zh-Hant)",
     "type": "string",
     "default": "en"
   },

@@ -237,8 +237,8 @@ class LivePulsePlugin(Star):
 
     @live.command("lang")
     async def cmd_lang(self, event: AstrMessageEvent, lang: str):
-        lang = lang.lower()
-        if lang not in ("en", "zh"):
+        lang = lang.strip()
+        if lang not in ("en", "zh-Hans", "zh-Hant"):
             yield event.plain_result(self._t(event, "cmd.lang.invalid", lang=lang))
             return
 

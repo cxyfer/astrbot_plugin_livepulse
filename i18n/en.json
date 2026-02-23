@@ -15,7 +15,7 @@
   "cmd.check.offline": "{name} is offline on {platform}",
   "cmd.check.unknown": "Could not determine status for {channel_id} on {platform}",
   "cmd.lang.success": "Language set to {lang}",
-  "cmd.lang.invalid": "Invalid language: {lang}. Valid: en, zh",
+  "cmd.lang.invalid": "Invalid language: {lang}. Valid: en, zh-Hans, zh-Hant",
   "cmd.notify.enabled": "Notifications enabled for this group",
   "cmd.notify.disabled": "Notifications disabled for this group",
   "cmd.notify.invalid": "Invalid option: {value}. Use on or off",
