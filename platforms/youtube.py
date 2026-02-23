@@ -7,8 +7,7 @@ from aiohttp import ClientSession, ClientTimeout
 from astrbot.api import logger
 
 from core.models import StatusSnapshot, ChannelInfo
-from platforms import DEFAULT_USER_AGENT
-from platforms.base import BasePlatformChecker, RateLimitError
+from platforms.base import DEFAULT_USER_AGENT, BasePlatformChecker, RateLimitError
 
 _STREAMS_URL = "https://www.youtube.com/channel/{channel_id}/streams"
 _HANDLE_URL = "https://www.youtube.com/{handle}"

@@ -21,8 +21,7 @@ from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
 from core.store import Store
 from i18n import I18nManager
-from platforms import DEFAULT_USER_AGENT
-from platforms.base import RateLimitError
+from platforms.base import DEFAULT_USER_AGENT, RateLimitError
 from platforms.bilibili import BilibiliChecker
 from platforms.twitch import TwitchChecker
 from platforms.youtube import YouTubeChecker
