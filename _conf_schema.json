@@ -1,0 +1,72 @@
+{
+  "twitch_client_id": {
+    "description": "Twitch API Client ID (register at dev.twitch.tv)",
+    "type": "string",
+    "default": ""
+  },
+  "twitch_client_secret": {
+    "description": "Twitch API Client Secret",
+    "type": "string",
+    "default": ""
+  },
+  "youtube_interval": {
+    "description": "YouTube polling interval (seconds)",
+    "type": "int",
+    "default": 300
+  },
+  "twitch_interval": {
+    "description": "Twitch polling interval (seconds)",
+    "type": "int",
+    "default": 120
+  },
+  "bilibili_interval": {
+    "description": "Bilibili polling interval (seconds)",
+    "type": "int",
+    "default": 180
+  },
+  "default_language": {
+    "description": "Default language for new groups (en / zh)",
+    "type": "string",
+    "default": "en"
+  },
+  "max_monitors_per_group": {
+    "description": "Maximum monitors per group",
+    "type": "int",
+    "default": 30
+  },
+  "max_global_channels": {
+    "description": "Maximum unique channels across all groups",
+    "type": "int",
+    "default": 500
+  },
+  "enable_notifications": {
+    "description": "Enable live-start notifications globally",
+    "type": "bool",
+    "default": true
+  },
+  "enable_end_notifications": {
+    "description": "Enable end-of-stream notifications globally",
+    "type": "bool",
+    "default": true
+  },
+  "include_thumbnail": {
+    "description": "Include cover thumbnail in notifications",
+    "type": "bool",
+    "default": true
+  },
+  "youtube_timeout": {
+    "description": "YouTube HTTP request timeout (seconds)",
+    "type": "int",
+    "default": 20
+  },
+  "twitch_timeout": {
+    "description": "Twitch HTTP request timeout (seconds)",
+    "type": "int",
+    "default": 10
+  },
+  "bilibili_timeout": {
+    "description": "Bilibili HTTP request timeout (seconds)",
+    "type": "int",
+    "default": 10
+  }
+}
