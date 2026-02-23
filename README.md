@@ -16,7 +16,7 @@ AstrBot plugin for monitoring live streams on YouTube, Twitch, and Bilibili. Sen
 ```bash
 # In AstrBot plugins directory
 cd ~/.astrbot/data/plugins/
-git clone https://github.com/usaya/astrbot_plugin_livepulse
+git clone https://github.com/cxyfer/astrbot_plugin_livepulse
 ```
 
 Or paste the repo URL in AstrBot WebUI plugin management page.

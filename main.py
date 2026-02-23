@@ -30,7 +30,7 @@ _VALID_PLATFORMS = ("youtube", "twitch", "bilibili")
 _DATA_DIR = Path(os.path.expanduser("~")) / ".astrbot" / "livepulse"
 
 
-@register("astrbot_plugin_livepulse", "Usaya", "Multi-platform live stream monitor", "1.0.0")
+@register("astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.0.0")
 class LivePulsePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig) -> None:
         super().__init__(context)
