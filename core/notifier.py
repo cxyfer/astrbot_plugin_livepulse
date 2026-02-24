@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import astrbot.api.message_components as Comp
 from astrbot.api import logger
+from astrbot.api.event import MessageChain
 
 from core.models import StatusSnapshot, Transition
 
@@ -73,17 +74,16 @@ class Notifier:
         return True
 
     async def _deliver(self, origin: str, text: str, thumbnail_url: str) -> None:
-        chain: list = [Comp.Plain(text)]
         if self._include_thumbnail and thumbnail_url:
-            chain.append(Comp.Image.fromURL(thumbnail_url))
+            chain = MessageChain(chain=[Comp.Plain(text), Comp.Image.fromURL(thumbnail_url)])
             try:
                 await self._ctx.send_message(origin, chain)
                 self._store.reset_failure(origin)
                 return
             except Exception:
                 logger.debug(f"Image send failed for {origin}, falling back to text-only")
-                chain = [Comp.Plain(text)]
 
+        chain = MessageChain(chain=[Comp.Plain(text)])
         try:
             await self._ctx.send_message(origin, chain)
             self._store.reset_failure(origin)
