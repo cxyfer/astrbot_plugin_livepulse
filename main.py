@@ -75,8 +75,10 @@ class LivePulsePlugin(Star):
             include_thumbnail=self.config.get("include_thumbnail", True),
         )
 
-        global_notify = self.config.get("enable_notifications", True)
-        global_end_notify = self.config.get("enable_end_notifications", True)
+        self._global_notify = self.config.get("enable_notifications", True)
+        self._global_end_notify = self.config.get("enable_end_notifications", True)
+        global_notify = self._global_notify
+        global_end_notify = self._global_end_notify
 
         platform_intervals = {
             "youtube": self.config.get("youtube_interval", 300),
@@ -130,6 +132,9 @@ class LivePulsePlugin(Star):
 
     def _get_checker(self, platform: str) -> YouTubeChecker | TwitchChecker | BilibiliChecker | None:
         return self._checkers.get(platform)
+
+    def _st(self, event: AstrMessageEvent, value: bool) -> str:
+        return self._t(event, "common.on" if value else "common.off")
 
     # --- commands ---
 
@@ -289,13 +294,31 @@ class LivePulsePlugin(Star):
         yield event.plain_result(self._i18n.get(lang, "cmd.lang.success", lang=lang))
 
     @live.command("notify")
-    async def cmd_notify(self, event: AstrMessageEvent, value: str):
-        value = value.lower()
-        if value not in ("on", "off"):
-            yield event.plain_result(self._t(event, "cmd.notify.invalid", value=value))
+    async def cmd_notify(self, event: AstrMessageEvent):
+        parts = event.message_str.strip().split()
+        arg = parts[1] if len(parts) > 1 else None
+
+        if arg is None:
+            origin = event.unified_msg_origin
+            gs = self._store.get_group(origin)
+            group_on = gs.notify_enabled if gs else True
+            failures = gs.send_failure_count if gs else 0
+            effective = self._global_notify and group_on
+            yield event.plain_result(self._t(
+                event, "cmd.notify.status",
+                global_st=self._st(event, self._global_notify),
+                group_st=self._st(event, group_on),
+                failures=failures,
+                effective=self._st(event, effective),
+            ))
             return
 
-        enabled = value == "on"
+        arg = arg.lower()
+        if arg not in ("on", "off"):
+            yield event.plain_result(self._t(event, "cmd.notify.invalid", value=arg))
+            return
+
+        enabled = arg == "on"
         async with self._store.lock:
             self._store.set_notify(event.unified_msg_origin, enabled)
             await self._store.persist()
@@ -304,13 +327,32 @@ class LivePulsePlugin(Star):
         yield event.plain_result(self._t(event, key))
 
     @live.command("end_notify")
-    async def cmd_end_notify(self, event: AstrMessageEvent, value: str):
-        value = value.lower()
-        if value not in ("on", "off"):
-            yield event.plain_result(self._t(event, "cmd.end_notify.invalid", value=value))
+    async def cmd_end_notify(self, event: AstrMessageEvent):
+        parts = event.message_str.strip().split()
+        arg = parts[1] if len(parts) > 1 else None
+
+        if arg is None:
+            origin = event.unified_msg_origin
+            gs = self._store.get_group(origin)
+            group_notify = gs.notify_enabled if gs else True
+            group_end = gs.end_notify_enabled if gs else True
+            notify_effective = self._global_notify and group_notify
+            effective = notify_effective and self._global_end_notify and group_end
+            yield event.plain_result(self._t(
+                event, "cmd.end_notify.status",
+                global_st=self._st(event, self._global_end_notify),
+                group_st=self._st(event, group_end),
+                notify_st=self._st(event, notify_effective),
+                effective=self._st(event, effective),
+            ))
             return
 
-        enabled = value == "on"
+        arg = arg.lower()
+        if arg not in ("on", "off"):
+            yield event.plain_result(self._t(event, "cmd.end_notify.invalid", value=arg))
+            return
+
+        enabled = arg == "on"
         async with self._store.lock:
             self._store.set_end_notify(event.unified_msg_origin, enabled)
             await self._store.persist()
@@ -336,4 +378,16 @@ class LivePulsePlugin(Star):
             self._t(event, "cmd.status.channels", count=unique),
             self._t(event, "cmd.status.groups", count=groups),
         ]
+
+        origin = event.unified_msg_origin
+        gs = self._store.get_group(origin)
+        group_notify = gs.notify_enabled if gs else True
+        group_end = gs.end_notify_enabled if gs else True
+        notify_eff = self._global_notify and group_notify
+        end_eff = notify_eff and self._global_end_notify and group_end
+        lines.append(self._t(
+            event, "cmd.status.notify_summary",
+            notify_st=self._st(event, notify_eff),
+            end_st=self._st(event, end_eff),
+        ))
         yield event.plain_result("\n".join(lines))
