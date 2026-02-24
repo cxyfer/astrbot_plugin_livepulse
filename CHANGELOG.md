@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.1.0 (2026-02-24)
+
+### ✨ New Features
+
+- **Discord embed notifications**: live events now use Discord embed format for richer notification display
+- **Test notification command**: add `/test_notify` command to preview notification appearance
+
+### 🐛 Bug Fixes
+
+- Add error logging for silent notification failures in test_notify
+
+---
+
 ## v1.0.0 (2026-02-24)
 
 ### ✨ New Features
