@@ -133,11 +133,19 @@ class Notifier:
         inst = self._ctx.get_platform_inst(platform_id)
         return inst is not None and inst.meta().name == "discord"
 
+    @staticmethod
+    def _make_embed(**kwargs: object) -> DiscordEmbed:
+        embed = DiscordEmbed.__new__(DiscordEmbed)
+        object.__setattr__(embed, "type", "discord_embed")
+        for k, v in kwargs.items():
+            object.__setattr__(embed, k, v)
+        return embed
+
     def _build_live_embed(self, lang: str, platform: str, snapshot: StatusSnapshot) -> MessageChain:
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
         if snapshot.category:
             fields.append({"name": self._i18n.get(lang, "notify.embed.field.category"), "value": snapshot.category, "inline": True})
-        embed = DiscordEmbed(
+        embed = self._make_embed(
             title=self._i18n.get(lang, "notify.embed.live_title"),
             description=snapshot.title,
             color=0x57F287,
@@ -151,7 +159,7 @@ class Notifier:
 
     def _build_end_embed(self, lang: str, platform: str, streamer_name: str) -> MessageChain:
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
-        embed = DiscordEmbed(
+        embed = self._make_embed(
             title=self._i18n.get(lang, "notify.embed.end_title"),
             description="",
             color=0x95A5A6,
