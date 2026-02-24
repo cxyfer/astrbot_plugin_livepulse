@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import aiohttp
+from urllib.parse import unquote
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -229,11 +230,22 @@ class LivePulsePlugin(Star):
             return
 
         lines = [self._t(event, "cmd.list.header")]
-        for platform, entries in gs.monitors.items():
-            for cid, entry in entries.items():
+        sections = []
+        for platform in _VALID_PLATFORMS:
+            entries = gs.monitors.get(platform)
+            if not entries:
+                continue
+            section = [self._t(event, "cmd.list.platform_header", platform=platform)]
+            for entry in entries.values():
                 status = entry.last_status if entry.initialized else "unknown"
-                status_emoji = STATUS_EMOJI.get(status, "❓")
-                lines.append(self._t(event, "cmd.list.entry", status_emoji=status_emoji, platform=platform, name=entry.channel_name, display_id=entry.display_id))
+                emoji = STATUS_EMOJI.get(status, "❓")
+                try:
+                    did = unquote(entry.display_id, errors="strict") if entry.display_id else entry.display_id
+                except Exception:
+                    did = entry.display_id
+                section.append(self._t(event, "cmd.list.entry", status_emoji=emoji, name=entry.channel_name, display_id=did))
+            sections.append("\n".join(section))
+        lines.append("\n\n".join(sections))
         yield event.plain_result("\n".join(lines))
 
     @live.command("check")
