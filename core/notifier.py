@@ -114,6 +114,8 @@ class Notifier:
                 if track_failure:
                     count = self._store.increment_failure(origin)
                     logger.warning(f"Notification delivery returned False for {origin} ({count} consecutive)")
+                else:
+                    logger.warning(f"Notification delivery returned False for {origin} (forced/test)")
                 return False
             if track_failure:
                 self._store.reset_failure(origin)
@@ -122,6 +124,8 @@ class Notifier:
             if track_failure:
                 count = self._store.increment_failure(origin)
                 logger.warning(f"Notification delivery failed for {origin} ({count} consecutive): {e}")
+            else:
+                logger.error(f"Notification delivery failed for {origin} (forced/test): {e}")
             return False
 
     def _is_discord_origin(self, origin: str) -> bool:

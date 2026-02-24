@@ -451,14 +451,21 @@ class LivePulsePlugin(Star):
         yield event.plain_result(self._t(event, "cmd.test_notify.scheduled", delay=delay_int))
 
     async def _run_test_notify(self, origin: str, delay: int) -> None:
-        await asyncio.sleep(delay)
-        snapshot = StatusSnapshot(
-            is_live=True,
-            streamer_name="Test Streamer",
-            title="Test Stream Title",
-            category="Just Chatting",
-            stream_url="https://example.com/test",
-            thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
-        )
-        await self._notifier.send_live_notification(origin, "test", snapshot, global_enable=True, force=True)
-        await self._notifier.send_end_notification(origin, "test", "Test Streamer", global_enable=True, global_end_enable=True, force=True)
+        try:
+            await asyncio.sleep(delay)
+            snapshot = StatusSnapshot(
+                is_live=True,
+                streamer_name="Test Streamer",
+                title="Test Stream Title",
+                category="Just Chatting",
+                stream_url="https://example.com/test",
+                thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
+            )
+            await self._notifier.send_live_notification(origin, "test", snapshot, global_enable=True, force=True)
+            await asyncio.sleep(1)
+            await self._notifier.send_end_notification(origin, "test", "Test Streamer", global_enable=True, global_end_enable=True, force=True)
+        except asyncio.CancelledError:
+            logger.info(f"test_notify task cancelled for {origin}")
+            raise
+        except Exception as e:
+            logger.error(f"test_notify task failed for {origin}: {e}", exc_info=True)
