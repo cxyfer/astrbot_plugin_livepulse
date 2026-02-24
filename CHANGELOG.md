@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1 (2026-02-25)
+
+### 🐛 Bug Fixes
+
+- Fix Discord embed construction failing due to pydantic v1 `__setattr__` rejecting undeclared fields on `DiscordEmbed`
+
+---
+
 ## v1.1.0 (2026-02-24)
 
 ### ✨ New Features
