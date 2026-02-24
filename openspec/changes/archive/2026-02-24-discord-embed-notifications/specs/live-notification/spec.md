@@ -1,8 +1,5 @@
-# live-notification Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change livepulse-plugin. Update Purpose after archive.
-## Requirements
 ### Requirement: Live-start notification content
 The system SHALL send a notification when a monitored streamer goes live. The notification MUST include: streamer name, stream title, category (if available), stream link, and cover thumbnail image. The notification text SHALL begin with 🟢 emoji. The `notify.live_start` i18n template SHALL use 🟢 as the leading emoji across all language files.
 
@@ -38,17 +35,6 @@ When the notification target is NOT a Discord platform, the system SHALL use the
 - **THEN** the system SHALL NOT evaluate state transitions
 - **AND** SHALL NOT send any notification
 
-### Requirement: No duplicate notifications per live session
-The system SHALL track live session identity per monitor per group and ensure at most one live-start notification per session.
-
-#### Scenario: Poller detects same live session twice
-- **WHEN** a channel remains live across consecutive poll cycles
-- **THEN** the system SHALL NOT send additional live-start notifications
-
-#### Scenario: Channel goes offline then live again (new session)
-- **WHEN** a channel goes offline and then goes live again
-- **THEN** the system SHALL send a new live-start notification (new session)
-
 ### Requirement: End-of-stream notification
 The system SHALL send an end-of-stream notification when a monitored channel transitions from live to offline, if `end_notify_enabled` is true for the group. The notification text SHALL begin with 🔴 emoji. The `notify.live_end` i18n template SHALL use 🔴 as the leading emoji across all language files.
 
@@ -78,49 +64,7 @@ When the notification target is NOT a Discord platform, the system SHALL use the
 - **AND** `end_notify_enabled` is false for the group
 - **THEN** the system SHALL NOT send an end-of-stream notification
 
-### Requirement: First-observation suppression
-On first startup or when adding a monitor that is already live, the system SHALL NOT send a live-start notification. This prevents notification spam. The immediate status check performed by `/live add` SHALL set `initialized = True` on success, which means the poller's first observation will see an initialized entry and correctly detect transitions rather than treating the first poll as a "first observation."
-
-#### Scenario: Plugin startup with already-live channel
-- **WHEN** the plugin starts and a monitored channel is already live
-- **THEN** the system SHALL record the status as live but SHALL NOT send a notification
-
-#### Scenario: Adding a monitor for a live channel
-- **WHEN** a user adds a monitor for a channel that is currently live
-- **AND** the immediate check succeeds (`success == True`)
-- **THEN** the system SHALL record the status as live with `initialized = True` but SHALL NOT send a notification
-
-#### Scenario: Adding a monitor when immediate check fails
-- **WHEN** a user adds a monitor for a channel and the immediate check fails
-- **THEN** the monitor SHALL remain `initialized = False`
-- **AND** the poller's first successful observation SHALL apply first-observation suppression as normal
-
-### Requirement: Notification effective rule
-Effective notification delivery MUST satisfy: `global_notify_enabled AND group_notify_enabled`. Both conditions MUST be true for any notification to be sent.
-
-#### Scenario: Global notifications disabled
-- **WHEN** global notifications are disabled in WebUI
-- **THEN** no notifications SHALL be sent to any group regardless of per-group settings
-
-#### Scenario: Group notifications disabled
-- **WHEN** a group's `notify_enabled` is false
-- **THEN** no notifications SHALL be sent to that group regardless of global settings
-
-### Requirement: Auto-disable on delivery failure
-The system SHALL track consecutive notification delivery failures per group. After 10 consecutive failures, the system SHALL automatically disable notifications for that group (set `notify_enabled = false`). The failure counter resets on any successful send or when the user runs `/live notify on`.
-
-#### Scenario: Auto-disable after 10 failures
-- **WHEN** `send_message` fails 10 consecutive times for a group
-- **THEN** the system SHALL set `notify_enabled = false` for that group
-- **AND** SHALL log the auto-disable event with the group origin
-
-#### Scenario: Counter reset on success
-- **WHEN** a notification is successfully sent to a group
-- **THEN** the failure counter for that group SHALL reset to 0
-
-#### Scenario: Manual re-enable after auto-disable
-- **WHEN** a user sends `/live notify on` in an auto-disabled group
-- **THEN** the system SHALL re-enable notifications and reset the failure counter to 0
+## ADDED Requirements
 
 ### Requirement: Discord platform detection from origin
 The system SHALL detect whether a notification target is a Discord platform by extracting the `platform_id` prefix from `unified_msg_origin` (first segment before `:`), resolving the platform instance via `Context.get_platform_inst(platform_id)`, and checking `meta().name == "discord"`.
@@ -164,4 +108,3 @@ New i18n keys SHALL be added to all three language files (`en.json`, `zh-Hans.js
 - **WHEN** the plugin loads i18n files
 - **THEN** each of `en.json`, `zh-Hans.json`, `zh-Hant.json` SHALL contain keys `notify.embed.live_title`, `notify.embed.end_title`, `notify.embed.field.platform`, `notify.embed.field.category`
 - **AND** existing keys `notify.live_start` and `notify.live_end` SHALL remain unchanged in all files
-
