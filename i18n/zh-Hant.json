@@ -41,5 +41,10 @@
   "notify.embed.field.platform": "平台",
   "notify.embed.field.category": "分類",
   "error.generic": "發生錯誤：{error}",
-  "error.rate_limited": "{platform} 目前正在限制請求頻率，請稍後再試。"
+  "error.rate_limited": "{platform} 目前正在限制請求頻率，請稍後再試。",
+  "cmd.test_notify.scheduled": "測試通知將在 {delay} 秒後發送。",
+  "cmd.test_notify.invalid_delay": "無效的延遲值。請提供正整數（例如 /live test_notify 10）。",
+  "cmd.test_notify.delay_too_long": "延遲過長，最大值為 {max} 秒。",
+  "cmd.test_notify.not_ready": "外掛尚未就緒，請等待初始化完成。",
+  "cmd.test_notify.already_pending": "本群已有一個測試通知正在等待發送。"
 }

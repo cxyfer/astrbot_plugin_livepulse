@@ -41,5 +41,10 @@
   "notify.embed.field.platform": "Platform",
   "notify.embed.field.category": "Category",
   "error.generic": "An error occurred: {error}",
-  "error.rate_limited": "{platform} is currently rate-limiting requests. Please try again later."
+  "error.rate_limited": "{platform} is currently rate-limiting requests. Please try again later.",
+  "cmd.test_notify.scheduled": "Test notification will be sent in {delay} seconds.",
+  "cmd.test_notify.invalid_delay": "Invalid delay. Please provide a positive integer (e.g., /live test_notify 10).",
+  "cmd.test_notify.delay_too_long": "Delay too long. Maximum is {max} seconds.",
+  "cmd.test_notify.not_ready": "Plugin not ready. Please wait for initialization.",
+  "cmd.test_notify.already_pending": "A test notification is already pending for this group."
 }

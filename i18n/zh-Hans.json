@@ -41,5 +41,10 @@
   "notify.embed.field.platform": "平台",
   "notify.embed.field.category": "分区",
   "error.generic": "发生错误：{error}",
-  "error.rate_limited": "{platform} 目前正在限制请求频率，请稍后再试。"
+  "error.rate_limited": "{platform} 目前正在限制请求频率，请稍后再试。",
+  "cmd.test_notify.scheduled": "测试通知将在 {delay} 秒后发送。",
+  "cmd.test_notify.invalid_delay": "无效的延迟值。请提供正整数（例如 /live test_notify 10）。",
+  "cmd.test_notify.delay_too_long": "延迟过长，最大值为 {max} 秒。",
+  "cmd.test_notify.not_ready": "插件尚未就绪，请等待初始化完成。",
+  "cmd.test_notify.already_pending": "本群已有一个测试通知正在等待发送。"
 }

@@ -33,14 +33,17 @@ class Notifier:
         platform: str,
         snapshot: StatusSnapshot,
         global_enable: bool,
+        *,
+        force: bool = False,
     ) -> None:
-        if not self._should_notify(origin, global_enable, Transition.LIVE_START):
+        if not force and not self._should_notify(origin, global_enable, Transition.LIVE_START):
             return
+        track = not force
         lang = self._store.get_language(origin)
         if DiscordEmbed is not None and self._is_discord_origin(origin):
             try:
                 chain = self._build_live_embed(lang, platform, snapshot)
-                await self._send_chain(origin, chain)
+                await self._send_chain(origin, chain, track_failure=track)
                 return
             except Exception:
                 logger.debug(f"Embed build failed for {origin}, falling back to plain text")
@@ -53,7 +56,7 @@ class Notifier:
             category=snapshot.category or "",
             url=snapshot.stream_url,
         )
-        await self._deliver(origin, text, snapshot.thumbnail_url)
+        await self._deliver(origin, text, snapshot.thumbnail_url, track_failure=track)
 
     async def send_end_notification(
         self,
@@ -62,19 +65,22 @@ class Notifier:
         streamer_name: str,
         global_enable: bool,
         global_end_enable: bool,
+        *,
+        force: bool = False,
     ) -> None:
-        if not self._should_notify(origin, global_enable, Transition.LIVE_END, global_end_enable):
+        if not force and not self._should_notify(origin, global_enable, Transition.LIVE_END, global_end_enable):
             return
+        track = not force
         lang = self._store.get_language(origin)
         if DiscordEmbed is not None and self._is_discord_origin(origin):
             try:
                 chain = self._build_end_embed(lang, platform, streamer_name)
-                await self._send_chain(origin, chain)
+                await self._send_chain(origin, chain, track_failure=track)
                 return
             except Exception:
                 logger.debug(f"Embed build failed for {origin}, falling back to plain text")
         text = self._i18n.get(lang, "notify.live_end", name=streamer_name, platform=platform)
-        await self._deliver(origin, text, thumbnail_url="")
+        await self._deliver(origin, text, thumbnail_url="", track_failure=track)
 
     def _should_notify(
         self,
@@ -92,27 +98,30 @@ class Notifier:
             return False
         return True
 
-    async def _deliver(self, origin: str, text: str, thumbnail_url: str) -> None:
+    async def _deliver(self, origin: str, text: str, thumbnail_url: str, *, track_failure: bool = True) -> None:
         if self._include_thumbnail and thumbnail_url:
             chain = MessageChain(chain=[Comp.Plain(text), Comp.Image.fromURL(thumbnail_url)])
-            if await self._send_chain(origin, chain):
+            if await self._send_chain(origin, chain, track_failure=track_failure):
                 return
             logger.debug(f"Image send failed for {origin}, falling back to text-only")
 
-        await self._send_chain(origin, MessageChain(chain=[Comp.Plain(text)]))
+        await self._send_chain(origin, MessageChain(chain=[Comp.Plain(text)]), track_failure=track_failure)
 
-    async def _send_chain(self, origin: str, chain: MessageChain) -> bool:
+    async def _send_chain(self, origin: str, chain: MessageChain, *, track_failure: bool = True) -> bool:
         try:
             result = await self._ctx.send_message(origin, chain)
             if result is False:
-                count = self._store.increment_failure(origin)
-                logger.warning(f"Notification delivery returned False for {origin} ({count} consecutive)")
+                if track_failure:
+                    count = self._store.increment_failure(origin)
+                    logger.warning(f"Notification delivery returned False for {origin} ({count} consecutive)")
                 return False
-            self._store.reset_failure(origin)
+            if track_failure:
+                self._store.reset_failure(origin)
             return True
         except Exception as e:
-            count = self._store.increment_failure(origin)
-            logger.warning(f"Notification delivery failed for {origin} ({count} consecutive): {e}")
+            if track_failure:
+                count = self._store.increment_failure(origin)
+                logger.warning(f"Notification delivery failed for {origin} ({count} consecutive): {e}")
             return False
 
     def _is_discord_origin(self, origin: str) -> bool:

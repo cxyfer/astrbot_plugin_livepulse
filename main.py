@@ -17,7 +17,7 @@ _PLUGIN_DIR = Path(__file__).resolve().parent
 if str(_PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_DIR))
 
-from core.models import STATUS_EMOJI
+from core.models import STATUS_EMOJI, StatusSnapshot
 from core.notifier import Notifier
 from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
@@ -46,6 +46,8 @@ class LivePulsePlugin(Star):
         self._pollers: list[PlatformPoller] = []
         self._poller_tasks: list[asyncio.Task] = []
         self._session: aiohttp.ClientSession | None = None
+        self._notifier: Notifier | None = None
+        self._bg_tasks: set[asyncio.Task] = set()
         self._initialized = False
         self._terminated = False
 
@@ -75,6 +77,7 @@ class LivePulsePlugin(Star):
             self.context, self._store, self._i18n,
             include_thumbnail=self.config.get("include_thumbnail", True),
         )
+        self._notifier = notifier
 
         self._global_notify = self.config.get("enable_notifications", True)
         self._global_end_notify = self.config.get("enable_end_notifications", True)
@@ -114,6 +117,15 @@ class LivePulsePlugin(Star):
                 await task
             except (asyncio.CancelledError, Exception):
                 pass
+
+        for task in self._bg_tasks:
+            task.cancel()
+        for task in list(self._bg_tasks):
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        self._bg_tasks.clear()
 
         if self._session and not self._session.closed:
             await self._session.close()
@@ -403,3 +415,50 @@ class LivePulsePlugin(Star):
             end_st=self._st(event, end_eff),
         ))
         yield event.plain_result("\n".join(lines))
+
+    @live.command("test_notify")
+    async def cmd_test_notify(self, event: AstrMessageEvent, delay: str | None = None):
+        if self._notifier is None:
+            yield event.plain_result(self._t(event, "cmd.test_notify.not_ready"))
+            return
+
+        if delay is None:
+            yield event.plain_result(self._t(event, "cmd.test_notify.invalid_delay"))
+            return
+
+        try:
+            delay_int = int(delay)
+        except (ValueError, TypeError):
+            yield event.plain_result(self._t(event, "cmd.test_notify.invalid_delay"))
+            return
+
+        if delay_int <= 0:
+            yield event.plain_result(self._t(event, "cmd.test_notify.invalid_delay"))
+            return
+
+        if delay_int > 300:
+            yield event.plain_result(self._t(event, "cmd.test_notify.delay_too_long", max=300))
+            return
+
+        origin = event.unified_msg_origin
+        if any(t.get_name() == f"test_notify:{origin}" and not t.done() for t in self._bg_tasks):
+            yield event.plain_result(self._t(event, "cmd.test_notify.already_pending"))
+            return
+
+        task = asyncio.create_task(self._run_test_notify(origin, delay_int), name=f"test_notify:{origin}")
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+        yield event.plain_result(self._t(event, "cmd.test_notify.scheduled", delay=delay_int))
+
+    async def _run_test_notify(self, origin: str, delay: int) -> None:
+        await asyncio.sleep(delay)
+        snapshot = StatusSnapshot(
+            is_live=True,
+            streamer_name="Test Streamer",
+            title="Test Stream Title",
+            category="Just Chatting",
+            stream_url="https://example.com/test",
+            thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
+        )
+        await self._notifier.send_live_notification(origin, "test", snapshot, global_enable=True, force=True)
+        await self._notifier.send_end_notification(origin, "test", "Test Streamer", global_enable=True, global_end_enable=True, force=True)
