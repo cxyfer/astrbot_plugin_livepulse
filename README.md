@@ -55,6 +55,7 @@ All commands are under the `/live` command group.
 | `/live notify <on\|off>` | Toggle live-start notifications |
 | `/live end_notify <on\|off>` | Toggle end-of-stream notifications |
 | `/live status` | Show plugin health and stats |
+| `/live test_notify <delay>` | Send simulated notifications after `<delay>` seconds (max 300) |
 
 **Platform identifiers:** `youtube`, `twitch`, `bilibili`
 
