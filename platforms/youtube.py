@@ -18,6 +18,7 @@ _OG_URL_CID_RE = re.compile(
     re.I,
 )
 _OG_TITLE_RE = re.compile(r'<meta\s+property="og:title"\s+content="([^"]+)"', re.I)
+_CANONICAL_BASE_RE = re.compile(r'"canonicalBaseUrl"\s*:\s*"/(@[^"]+)"')
 
 
 class YouTubeChecker(BasePlatformChecker):
@@ -35,7 +36,7 @@ class YouTubeChecker(BasePlatformChecker):
                 raise
             except Exception as e:
                 logger.warning(f"YouTube check failed for {cid}: {e}")
-                results[cid] = StatusSnapshot(is_live=False, streamer_name=cid)
+                results[cid] = StatusSnapshot(is_live=False, streamer_name=cid, success=False)
         return results
 
     async def _check_single(self, channel_id: str, session: ClientSession) -> StatusSnapshot:
@@ -45,7 +46,7 @@ class YouTubeChecker(BasePlatformChecker):
             if resp.status == 429:
                 raise RateLimitError("youtube")
             if resp.status != 200:
-                return StatusSnapshot(is_live=False, streamer_name=channel_id)
+                return StatusSnapshot(is_live=False, streamer_name=channel_id, success=False)
             html = await resp.text()
 
         if _is_blocked(html):
@@ -53,6 +54,9 @@ class YouTubeChecker(BasePlatformChecker):
 
         name_match = _OG_TITLE_RE.search(html)
         name = name_match.group(1) if name_match else channel_id
+
+        handle_match = _CANONICAL_BASE_RE.search(html)
+        display_id = handle_match.group(1) if handle_match else None
 
         live_marker = '"style":"LIVE"'
         search_pos = 0
@@ -97,7 +101,7 @@ class YouTubeChecker(BasePlatformChecker):
             break
 
         if not video_id:
-            return StatusSnapshot(is_live=False, streamer_name=name)
+            return StatusSnapshot(is_live=False, streamer_name=name, display_id=display_id)
 
         stream_url = f"https://www.youtube.com/watch?v={video_id}"
 
@@ -108,6 +112,7 @@ class YouTubeChecker(BasePlatformChecker):
             thumbnail_url=thumb,
             streamer_name=name,
             stream_url=stream_url,
+            display_id=display_id,
         )
 
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
@@ -115,14 +120,16 @@ class YouTubeChecker(BasePlatformChecker):
             resolved = await self._resolve_handle(channel_id, session)
             if resolved is None:
                 return None
-            channel_id, name = resolved
+            cid, name, display_id = resolved
+            return ChannelInfo(channel_id=cid, channel_name=name, platform="youtube", display_id=display_id)
         else:
-            name = await self._get_channel_name(channel_id, session)
-            if name is None:
+            result = await self._get_channel_name(channel_id, session)
+            if result is None:
                 return None
-        return ChannelInfo(channel_id=channel_id, channel_name=name, platform="youtube")
+            name, display_id = result
+            return ChannelInfo(channel_id=channel_id, channel_name=name, platform="youtube", display_id=display_id)
 
-    async def _resolve_handle(self, handle: str, session: ClientSession) -> tuple[str, str] | None:
+    async def _resolve_handle(self, handle: str, session: ClientSession) -> tuple[str, str, str] | None:
         url = _HANDLE_URL.format(handle=handle)
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
@@ -146,9 +153,13 @@ class YouTubeChecker(BasePlatformChecker):
 
         name_match = _OG_TITLE_RE.search(html)
         name = name_match.group(1) if name_match else handle
-        return channel_id, name
 
-    async def _get_channel_name(self, channel_id: str, session: ClientSession) -> str | None:
+        handle_match = _CANONICAL_BASE_RE.search(html)
+        display_id = handle_match.group(1) if handle_match else handle
+
+        return channel_id, name, display_id
+
+    async def _get_channel_name(self, channel_id: str, session: ClientSession) -> tuple[str, str] | None:
         url = f"https://www.youtube.com/channel/{channel_id}"
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
@@ -159,7 +170,10 @@ class YouTubeChecker(BasePlatformChecker):
         except Exception:
             return None
         name_match = _OG_TITLE_RE.search(html)
-        return name_match.group(1) if name_match else channel_id
+        name = name_match.group(1) if name_match else channel_id
+        handle_match = _CANONICAL_BASE_RE.search(html)
+        display_id = handle_match.group(1) if handle_match else channel_id
+        return name, display_id
 
 
 def _is_blocked(html: str) -> bool:

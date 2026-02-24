@@ -16,6 +16,7 @@ _PLUGIN_DIR = Path(__file__).resolve().parent
 if str(_PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_DIR))
 
+from core.models import STATUS_EMOJI
 from core.notifier import Notifier
 from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
@@ -178,6 +179,19 @@ class LivePulsePlugin(Star):
                 elif "duplicate" in err:
                     yield event.plain_result(self._t(event, err, name=info.channel_name, channel_id=info.channel_id))
                 return
+
+            try:
+                statuses = await checker.check_status([info.channel_id], self._session)
+                snap = statuses.get(info.channel_id)
+                if snap and snap.success:
+                    status_str = "live" if snap.is_live else "offline"
+                    self._store.update_status(origin, platform, info.channel_id, status_str, snap.stream_id)
+                    entry = self._store.get_group(origin).monitors[platform][info.channel_id]
+                    if snap.display_id:
+                        entry.display_id = snap.display_id
+            except Exception as e:
+                logger.debug(f"Immediate check failed for {platform}/{info.channel_id}: {e}")
+
             await self._store.persist()
 
         yield event.plain_result(self._t(event, "cmd.add.success", platform=platform, name=info.channel_name, channel_id=info.channel_id))
@@ -189,6 +203,10 @@ class LivePulsePlugin(Star):
 
         async with self._store.lock:
             removed = self._store.remove_monitor(origin, platform, channel_id)
+            if not removed:
+                resolved = self._store.lookup_by_display_id(origin, platform, channel_id)
+                if resolved:
+                    removed = self._store.remove_monitor(origin, platform, resolved)
             if removed:
                 await self._store.persist()
 
@@ -209,7 +227,8 @@ class LivePulsePlugin(Star):
         for platform, entries in gs.monitors.items():
             for cid, entry in entries.items():
                 status = entry.last_status if entry.initialized else "unknown"
-                lines.append(self._t(event, "cmd.list.entry", status=status, platform=platform, name=entry.channel_name, channel_id=cid))
+                status_emoji = STATUS_EMOJI.get(status, "❓")
+                lines.append(self._t(event, "cmd.list.entry", status_emoji=status_emoji, platform=platform, name=entry.channel_name, display_id=entry.display_id))
         yield event.plain_result("\n".join(lines))
 
     @live.command("check")

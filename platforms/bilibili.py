@@ -45,7 +45,7 @@ class BilibiliChecker(BasePlatformChecker):
             except Exception as e:
                 logger.warning(f"Bilibili batch query failed: {e}")
                 for uid in chunk:
-                    results[uid] = StatusSnapshot(is_live=False, streamer_name=uid)
+                    results[uid] = StatusSnapshot(is_live=False, streamer_name=uid, success=False)
                 continue
             info_map = data.get("data", {})
             for uid in chunk:

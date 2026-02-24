@@ -127,6 +127,9 @@ class PlatformPoller:
 
         async with self._store.lock:
             for channel_id, status in statuses.items():
+                if not status.success:
+                    continue
+
                 self._channel_failures.pop(channel_id, None)
                 self._channel_backoff_until.pop(channel_id, None)
 
@@ -140,6 +143,9 @@ class PlatformPoller:
                     entry = gs.monitors.get(self._platform, {}).get(channel_id)
                     if entry is None:
                         continue
+
+                    if status.display_id:
+                        entry.display_id = status.display_id
 
                     transition = self._compute_transition(entry, new_status, status.stream_id)
                     self._store.update_status(origin, self._platform, channel_id, new_status, status.stream_id)

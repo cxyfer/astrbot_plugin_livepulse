@@ -14,13 +14,21 @@ class ChannelInfo:
     channel_id: str
     channel_name: str
     platform: str
+    display_id: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.display_id:
+            self.display_id = self.channel_id
 
     def to_dict(self) -> dict:
-        return {"channel_id": self.channel_id, "channel_name": self.channel_name, "platform": self.platform}
+        return {"channel_id": self.channel_id, "channel_name": self.channel_name, "platform": self.platform, "display_id": self.display_id}
 
     @classmethod
     def from_dict(cls, d: dict) -> ChannelInfo:
-        return cls(channel_id=d["channel_id"], channel_name=d["channel_name"], platform=d["platform"])
+        return cls(channel_id=d["channel_id"], channel_name=d["channel_name"], platform=d["platform"], display_id=d.get("display_id", d["channel_id"]))
+
+
+STATUS_EMOJI: dict[str, str] = {"live": "🟢", "offline": "🔴", "unknown": "❓"}
 
 
 @dataclass
@@ -32,6 +40,8 @@ class StatusSnapshot:
     thumbnail_url: str = ""
     streamer_name: str = ""
     stream_url: str = ""
+    success: bool = True
+    display_id: str | None = None
 
 
 @dataclass
@@ -41,6 +51,11 @@ class MonitorEntry:
     last_status: str = "unknown"  # "live" | "offline" | "unknown"
     last_stream_id: str = ""
     initialized: bool = False
+    display_id: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.display_id:
+            self.display_id = self.channel_id
 
     def to_dict(self) -> dict:
         return {
@@ -49,6 +64,7 @@ class MonitorEntry:
             "last_status": self.last_status,
             "last_stream_id": self.last_stream_id,
             "initialized": self.initialized,
+            "display_id": self.display_id,
         }
 
     @classmethod
@@ -59,6 +75,7 @@ class MonitorEntry:
             last_status=d.get("last_status", "unknown"),
             last_stream_id=d.get("last_stream_id", ""),
             initialized=d.get("initialized", False),
+            display_id=d.get("display_id", d["channel_id"]),
         )
 
 

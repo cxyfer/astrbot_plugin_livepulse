@@ -63,7 +63,7 @@ class TwitchChecker(BasePlatformChecker):
             except Exception as e:
                 logger.warning(f"Twitch streams query failed: {e}")
                 for uid in chunk:
-                    results[uid] = StatusSnapshot(is_live=False, streamer_name=uid)
+                    results[uid] = StatusSnapshot(is_live=False, streamer_name=uid, success=False)
                 continue
 
             live_map: dict[str, dict] = {}

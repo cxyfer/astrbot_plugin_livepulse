@@ -10,7 +10,7 @@
   "cmd.remove.success": "已移除 {platform} 監控：{channel_id}",
   "cmd.remove.not_found": "未找到監控：{platform} {channel_id}",
   "cmd.list.header": "本群監控清單：",
-  "cmd.list.entry": "  [{status}] {platform} | {name}（{channel_id}）",
+  "cmd.list.entry": "  {status_emoji} {platform} | {name}（{display_id}）",
   "cmd.list.empty": "暫無監控。使用 /live add 新增。",
   "cmd.check.live": "{name} 正在 {platform} 直播中\n標題：{title}\n分類：{category}\n連結：{url}",
   "cmd.check.offline": "{name} 目前未在 {platform} 直播",
@@ -28,8 +28,8 @@
   "cmd.status.monitors": "監控數：YouTube {yt} | Twitch {tw} | Bilibili {bl}",
   "cmd.status.channels": "唯一頻道數：{count}",
   "cmd.status.groups": "群組數：{count}",
-  "notify.live_start": "🔴 {name} 正在 {platform} 直播！\n{title}\n{category}\n{url}",
-  "notify.live_end": "⚫ {name} 已在 {platform} 結束直播。",
+  "notify.live_start": "🟢 {name} 正在 {platform} 直播！\n{title}\n{category}\n{url}",
+  "notify.live_end": "🔴 {name} 已在 {platform} 結束直播。",
   "error.generic": "發生錯誤：{error}",
   "error.rate_limited": "{platform} 目前正在限制請求頻率，請稍後再試。"
 }

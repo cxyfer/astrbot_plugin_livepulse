@@ -71,6 +71,7 @@ class Store:
         plat_monitors[info.channel_id] = MonitorEntry(
             channel_id=info.channel_id,
             channel_name=info.channel_name,
+            display_id=info.display_id,
         )
         self.reverse_index.setdefault(platform, {}).setdefault(info.channel_id, set()).add(origin)
         return None
@@ -145,3 +146,12 @@ class Store:
 
     def get_group(self, origin: str) -> GroupState | None:
         return self.groups.get(origin)
+
+    def lookup_by_display_id(self, origin: str, platform: str, display_id: str) -> str | None:
+        gs = self.groups.get(origin)
+        if gs is None:
+            return None
+        for cid, entry in gs.monitors.get(platform, {}).items():
+            if entry.display_id == display_id:
+                return cid
+        return None
