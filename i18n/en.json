@@ -36,6 +36,10 @@
   "common.off": "❌ off",
   "notify.live_start": "🟢 {name} is now LIVE on {platform}!\n{title}\n{category}\n{url}",
   "notify.live_end": "🔴 {name} has ended the stream on {platform}.",
+  "notify.embed.live_title": "🟢 Now LIVE!",
+  "notify.embed.end_title": "🔴 Stream Ended",
+  "notify.embed.field.platform": "Platform",
+  "notify.embed.field.category": "Category",
   "error.generic": "An error occurred: {error}",
   "error.rate_limited": "{platform} is currently rate-limiting requests. Please try again later."
 }

@@ -36,6 +36,10 @@
   "common.off": "❌ 關閉",
   "notify.live_start": "🟢 {name} 正在 {platform} 直播！\n{title}\n{category}\n{url}",
   "notify.live_end": "🔴 {name} 已在 {platform} 結束直播。",
+  "notify.embed.live_title": "🟢 直播開始！",
+  "notify.embed.end_title": "🔴 直播結束",
+  "notify.embed.field.platform": "平台",
+  "notify.embed.field.category": "分類",
   "error.generic": "發生錯誤：{error}",
   "error.rate_limited": "{platform} 目前正在限制請求頻率，請稍後再試。"
 }

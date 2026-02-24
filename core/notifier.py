@@ -8,6 +8,11 @@ from astrbot.api.event import MessageChain
 
 from core.models import StatusSnapshot, Transition
 
+try:
+    from astrbot.core.platform.sources.discord.components import DiscordEmbed
+except ImportError:
+    DiscordEmbed = None
+
 if TYPE_CHECKING:
     from astrbot.api.star import Context
 
@@ -32,6 +37,13 @@ class Notifier:
         if not self._should_notify(origin, global_enable, Transition.LIVE_START):
             return
         lang = self._store.get_language(origin)
+        if DiscordEmbed is not None and self._is_discord_origin(origin):
+            try:
+                chain = self._build_live_embed(lang, platform, snapshot)
+                await self._send_chain(origin, chain)
+                return
+            except Exception:
+                logger.debug(f"Embed build failed for {origin}, falling back to plain text")
         text = self._i18n.get(
             lang,
             "notify.live_start",
@@ -54,6 +66,13 @@ class Notifier:
         if not self._should_notify(origin, global_enable, Transition.LIVE_END, global_end_enable):
             return
         lang = self._store.get_language(origin)
+        if DiscordEmbed is not None and self._is_discord_origin(origin):
+            try:
+                chain = self._build_end_embed(lang, platform, streamer_name)
+                await self._send_chain(origin, chain)
+                return
+            except Exception:
+                logger.debug(f"Embed build failed for {origin}, falling back to plain text")
         text = self._i18n.get(lang, "notify.live_end", name=streamer_name, platform=platform)
         await self._deliver(origin, text, thumbnail_url="")
 
@@ -76,17 +95,57 @@ class Notifier:
     async def _deliver(self, origin: str, text: str, thumbnail_url: str) -> None:
         if self._include_thumbnail and thumbnail_url:
             chain = MessageChain(chain=[Comp.Plain(text), Comp.Image.fromURL(thumbnail_url)])
-            try:
-                await self._ctx.send_message(origin, chain)
-                self._store.reset_failure(origin)
+            if await self._send_chain(origin, chain):
                 return
-            except Exception:
-                logger.debug(f"Image send failed for {origin}, falling back to text-only")
+            logger.debug(f"Image send failed for {origin}, falling back to text-only")
 
-        chain = MessageChain(chain=[Comp.Plain(text)])
+        await self._send_chain(origin, MessageChain(chain=[Comp.Plain(text)]))
+
+    async def _send_chain(self, origin: str, chain: MessageChain) -> bool:
         try:
-            await self._ctx.send_message(origin, chain)
+            result = await self._ctx.send_message(origin, chain)
+            if result is False:
+                count = self._store.increment_failure(origin)
+                logger.warning(f"Notification delivery returned False for {origin} ({count} consecutive)")
+                return False
             self._store.reset_failure(origin)
+            return True
         except Exception as e:
             count = self._store.increment_failure(origin)
             logger.warning(f"Notification delivery failed for {origin} ({count} consecutive): {e}")
+            return False
+
+    def _is_discord_origin(self, origin: str) -> bool:
+        platform_id = origin.split(":", 1)[0]
+        inst = self._ctx.get_platform_inst(platform_id)
+        return inst is not None and inst.meta().name == "discord"
+
+    def _build_live_embed(self, lang: str, platform: str, snapshot: StatusSnapshot) -> MessageChain:
+        fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
+        if snapshot.category:
+            fields.append({"name": self._i18n.get(lang, "notify.embed.field.category"), "value": snapshot.category, "inline": True})
+        embed = DiscordEmbed(
+            title=self._i18n.get(lang, "notify.embed.live_title"),
+            description=snapshot.title,
+            color=0x57F287,
+            url=snapshot.stream_url,
+            thumbnail=snapshot.thumbnail_url or None,
+            image=None,
+            footer=snapshot.streamer_name,
+            fields=fields,
+        )
+        return MessageChain(chain=[embed])
+
+    def _build_end_embed(self, lang: str, platform: str, streamer_name: str) -> MessageChain:
+        fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
+        embed = DiscordEmbed(
+            title=self._i18n.get(lang, "notify.embed.end_title"),
+            description="",
+            color=0x95A5A6,
+            url="",
+            thumbnail=None,
+            image=None,
+            footer=streamer_name,
+            fields=fields,
+        )
+        return MessageChain(chain=[embed])
