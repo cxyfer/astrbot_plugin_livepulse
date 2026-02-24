@@ -1,8 +1,5 @@
-# live-notification Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change livepulse-plugin. Update Purpose after archive.
-## Requirements
 ### Requirement: Live-start notification content
 The system SHALL send a notification when a monitored streamer goes live. The notification MUST include: streamer name, stream title, category (if available), stream link, and cover thumbnail image. The notification text SHALL begin with 🟢 emoji. The `notify.live_start` i18n template SHALL use 🟢 as the leading emoji across all language files.
 
@@ -23,17 +20,6 @@ The system SHALL send a notification when a monitored streamer goes live. The no
 - **WHEN** a `StatusSnapshot` has `success == False`
 - **THEN** the system SHALL NOT evaluate state transitions
 - **AND** SHALL NOT send any notification
-
-### Requirement: No duplicate notifications per live session
-The system SHALL track live session identity per monitor per group and ensure at most one live-start notification per session.
-
-#### Scenario: Poller detects same live session twice
-- **WHEN** a channel remains live across consecutive poll cycles
-- **THEN** the system SHALL NOT send additional live-start notifications
-
-#### Scenario: Channel goes offline then live again (new session)
-- **WHEN** a channel goes offline and then goes live again
-- **THEN** the system SHALL send a new live-start notification (new session)
 
 ### Requirement: End-of-stream notification
 The system SHALL send an end-of-stream notification when a monitored channel transitions from live to offline, if `end_notify_enabled` is true for the group. The notification text SHALL begin with 🔴 emoji. The `notify.live_end` i18n template SHALL use 🔴 as the leading emoji across all language files.
@@ -66,31 +52,3 @@ On first startup or when adding a monitor that is already live, the system SHALL
 - **WHEN** a user adds a monitor for a channel and the immediate check fails
 - **THEN** the monitor SHALL remain `initialized = False`
 - **AND** the poller's first successful observation SHALL apply first-observation suppression as normal
-
-### Requirement: Notification effective rule
-Effective notification delivery MUST satisfy: `global_notify_enabled AND group_notify_enabled`. Both conditions MUST be true for any notification to be sent.
-
-#### Scenario: Global notifications disabled
-- **WHEN** global notifications are disabled in WebUI
-- **THEN** no notifications SHALL be sent to any group regardless of per-group settings
-
-#### Scenario: Group notifications disabled
-- **WHEN** a group's `notify_enabled` is false
-- **THEN** no notifications SHALL be sent to that group regardless of global settings
-
-### Requirement: Auto-disable on delivery failure
-The system SHALL track consecutive notification delivery failures per group. After 10 consecutive failures, the system SHALL automatically disable notifications for that group (set `notify_enabled = false`). The failure counter resets on any successful send or when the user runs `/live notify on`.
-
-#### Scenario: Auto-disable after 10 failures
-- **WHEN** `send_message` fails 10 consecutive times for a group
-- **THEN** the system SHALL set `notify_enabled = false` for that group
-- **AND** SHALL log the auto-disable event with the group origin
-
-#### Scenario: Counter reset on success
-- **WHEN** a notification is successfully sent to a group
-- **THEN** the failure counter for that group SHALL reset to 0
-
-#### Scenario: Manual re-enable after auto-disable
-- **WHEN** a user sends `/live notify on` in an auto-disabled group
-- **THEN** the system SHALL re-enable notifications and reset the failure counter to 0
-

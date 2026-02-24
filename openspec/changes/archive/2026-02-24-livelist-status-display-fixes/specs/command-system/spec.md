@@ -1,14 +1,4 @@
-# command-system Specification
-
-## Purpose
-TBD - created by archiving change livepulse-plugin. Update Purpose after archive.
-## Requirements
-### Requirement: Command group /live with sub-commands
-The system SHALL register a command group `/live` using AstrBot's `@filter.command_group("live")` decorator. All sub-commands SHALL be registered under this group.
-
-#### Scenario: User invokes /live without sub-command
-- **WHEN** a user sends `/live` without a sub-command
-- **THEN** AstrBot SHALL render the command group tree structure showing all available sub-commands
+## MODIFIED Requirements
 
 ### Requirement: /live add command
 The system SHALL provide `/live add <platform> <channel_id>` to add a monitor to the current group. Platform MUST be one of `youtube`, `twitch`, `bilibili`. After successful addition and persistence, the system SHALL perform a single immediate status check for the newly added channel. If the check succeeds (`StatusSnapshot.success == True`), the system SHALL update the monitor's `last_status` and set `initialized = True` before responding. If the check fails, the system SHALL keep `last_status = "unknown"` and `initialized = False`, and SHALL NOT block the add operation.
@@ -89,66 +79,7 @@ The system SHALL provide `/live list` to display all monitors for the current gr
 - **WHEN** a monitor has `display_id == channel_id` (Bilibili/Twitch or YouTube fallback)
 - **THEN** `/live list` SHALL display `(channel_id)` as the identifier
 
-### Requirement: /live check command
-The system SHALL provide `/live check <platform> <channel_id>` to perform a one-off status check without requiring a subscription.
-
-#### Scenario: Check a live channel
-- **WHEN** user sends `/live check twitch shroud` and the channel is live
-- **THEN** the system SHALL display stream title, category, and link
-
-#### Scenario: Check an offline channel
-- **WHEN** user sends `/live check bilibili 12345` and the user is offline
-- **THEN** the system SHALL display that the user is not streaming
-
-#### Scenario: Check does not modify state
-- **WHEN** user sends `/live check` for any channel
-- **THEN** no subscription data or persistent state SHALL be modified
-
-### Requirement: /live lang command
-The system SHALL provide `/live lang <en|zh>` to switch the response language for the current group.
-
-#### Scenario: Switch language to Chinese
-- **WHEN** user sends `/live lang zh`
-- **THEN** all subsequent responses and notifications for this group SHALL use Chinese strings
-
-#### Scenario: Switch language to English
-- **WHEN** user sends `/live lang en`
-- **THEN** all subsequent responses and notifications for this group SHALL use English strings
-
-#### Scenario: Invalid language code
-- **WHEN** user sends `/live lang jp`
-- **THEN** the system SHALL respond with an error listing valid language codes (en, zh)
-
-### Requirement: /live notify command
-The system SHALL provide `/live notify <on|off>` to toggle live-start notifications for the current group.
-
-#### Scenario: Disable notifications
-- **WHEN** user sends `/live notify off`
-- **THEN** the system SHALL stop sending live-start notifications to this group
-- **AND** the group's monitors SHALL continue being polled (status tracked)
-
-#### Scenario: Enable notifications
-- **WHEN** user sends `/live notify on`
-- **THEN** the system SHALL resume sending live-start notifications to this group
-- **AND** the send failure counter SHALL reset to 0
-
-### Requirement: /live end_notify command
-The system SHALL provide `/live end_notify <on|off>` to toggle end-of-stream notifications for the current group.
-
-#### Scenario: Disable end notifications
-- **WHEN** user sends `/live end_notify off`
-- **THEN** the system SHALL stop sending end-of-stream notifications to this group
-
-#### Scenario: Enable end notifications
-- **WHEN** user sends `/live end_notify on`
-- **THEN** the system SHALL resume sending end-of-stream notifications to this group
-
-### Requirement: /live status command
-The system SHALL provide `/live status` to display plugin health information.
-
-#### Scenario: Display plugin status
-- **WHEN** user sends `/live status`
-- **THEN** the system SHALL display: number of active poller tasks, per-platform monitor counts, total unique channels, total groups, and whether each poller is healthy
+## ADDED Requirements
 
 ### Requirement: Status emoji mapping
 The system SHALL define a constant mapping from status strings to emoji symbols: `{"live": "🟢", "offline": "🔴", "unknown": "❓"}`. This mapping SHALL be the single source of truth for all status-to-emoji conversions. When `initialized == False`, the effective status SHALL be `"unknown"` regardless of `last_status`.
@@ -161,4 +92,3 @@ The system SHALL define a constant mapping from status strings to emoji symbols:
 #### Scenario: Uninitialized entry always shows unknown emoji
 - **WHEN** a `MonitorEntry` has `initialized == False`
 - **THEN** the displayed emoji SHALL be `❓` regardless of `last_status` value
-

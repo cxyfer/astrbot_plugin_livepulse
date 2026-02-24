@@ -1,8 +1,5 @@
-# multi-platform-monitoring Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change livepulse-plugin. Update Purpose after archive.
-## Requirements
 ### Requirement: YouTube channel monitoring via HTML scraping
 The system SHALL monitor YouTube channels by scraping the `/channel/{CHANNEL_ID}/live` page for live status indicators (`"isLive":true` or `hqdefault_live.jpg`). The system SHALL support both Channel ID (`UCxxxxx`) and `@handle` format as input, permanently resolving `@handle` to Channel ID at subscription time. The system SHALL also extract and store the `@handle` as `display_id` by parsing `canonicalBaseUrl` from the page HTML using the pattern `"canonicalBaseUrl"\s*:\s*"(/@[^"]+)"`. If extraction fails, `display_id` SHALL fallback to `channel_id`.
 
@@ -94,57 +91,7 @@ The system SHALL monitor Bilibili users using `POST https://api.live.bilibili.co
 - **WHEN** the Bilibili poller encounters a non-RateLimitError exception during batch query
 - **THEN** the system SHALL return `StatusSnapshot(is_live=False, success=False)` for affected UIDs
 
-### Requirement: Platform-independent polling intervals
-Each platform SHALL have a configurable global polling interval via WebUI. Default intervals: YouTube 300s, Twitch 120s, Bilibili 180s.
-
-#### Scenario: Default polling intervals applied
-- **WHEN** the plugin starts with default configuration
-- **THEN** YouTube poller SHALL poll every 300s, Twitch every 120s, Bilibili every 180s
-
-#### Scenario: Custom polling interval via WebUI
-- **WHEN** an administrator changes a platform's polling interval in WebUI
-- **THEN** the poller for that platform SHALL adopt the new interval on the next cycle
-
-### Requirement: Global monitor count limit
-The system SHALL enforce a global maximum of unique monitored channels (default 500, configurable via WebUI). The count is calculated after deduplication across all groups.
-
-#### Scenario: Global limit reached
-- **WHEN** a user attempts to add a monitor that would cause the global unique channel count to exceed the configured maximum
-- **THEN** the system SHALL reject the add operation with a "global limit reached" error
-
-#### Scenario: Shared channel does not double-count
-- **WHEN** Group A and Group B both monitor the same YouTube channel
-- **THEN** the system SHALL count that channel as 1 toward the global limit
-
-### Requirement: Shared HTTP session MUST include browser-like User-Agent
-The shared `aiohttp.ClientSession` SHALL be initialized with a default `User-Agent` header set to the value of `DEFAULT_USER_AGENT` defined in `platforms/__init__.py`. All platform checkers using the shared session SHALL inherit this header automatically. The User-Agent value SHALL be a standard desktop Chrome browser string.
-
-#### Scenario: Bilibili API accepts requests with shared session UA
-- **WHEN** the Bilibili checker sends a POST to `get_status_info_by_uids` via the shared session
-- **THEN** the request SHALL include a `User-Agent` header equal to `DEFAULT_USER_AGENT`
-- **AND** Bilibili SHALL NOT return HTTP 412
-
-#### Scenario: Bilibili room resolution uses shared session UA
-- **WHEN** the Bilibili checker sends a GET to `get_info?room_id=X` via the shared session
-- **THEN** the request SHALL include the session-level `User-Agent` header
-
-#### Scenario: Per-request headers merge with session defaults
-- **WHEN** a platform checker (e.g., YouTube) provides per-request headers
-- **THEN** those headers SHALL merge with (not replace) the session-level `User-Agent`
-- **AND** if per-request headers include `User-Agent`, the per-request value SHALL take precedence
-
-#### Scenario: Twitch API unaffected by session-level UA
-- **WHEN** the Twitch checker sends requests with `Client-ID` and `Authorization` headers via the shared session
-- **THEN** the session-level `User-Agent` SHALL also be sent
-- **AND** the Twitch API SHALL respond normally (UA does not conflict with OAuth headers)
-
-### Requirement: Single source of truth for User-Agent constant
-The `DEFAULT_USER_AGENT` constant SHALL be defined in `platforms/__init__.py`. Both the session initialization in `main.py` and any per-request header construction (e.g., YouTube) SHALL import from this single location. No duplicate UA string literals SHALL exist across the codebase.
-
-#### Scenario: YouTube per-request UA matches session default
-- **WHEN** YouTube constructs per-request headers with a User-Agent
-- **THEN** the value SHALL be imported from `DEFAULT_USER_AGENT` in `platforms/__init__.py`
-- **AND** no hardcoded UA string SHALL exist in `youtube.py`
+## ADDED Requirements
 
 ### Requirement: StatusSnapshot success field
 `StatusSnapshot` SHALL include a `success: bool` field (default `True`). When a platform checker encounters a non-`RateLimitError` exception during `check_status`, it SHALL set `success = False` on the returned snapshot instead of silently mapping the error to `is_live = False`. The poller and `cmd_add` initialization logic SHALL only update `MonitorEntry.last_status` and `MonitorEntry.initialized` when `success == True`.
@@ -223,4 +170,3 @@ The `DEFAULT_USER_AGENT` constant SHALL be defined in `platforms/__init__.py`. B
 #### Scenario: Lookup non-existent display_id
 - **WHEN** `lookup_by_display_id` is called with a `display_id` that matches no monitor
 - **THEN** the method SHALL return `None`
-
