@@ -251,9 +251,32 @@ class LivePulsePlugin(Star):
         yield event.plain_result(self._t(event, "cmd.add.success", platform=platform, name=info.channel_name, channel_id=info.channel_id))
 
     @live.command("remove")
-    async def cmd_remove(self, event: AstrMessageEvent, platform: str, channel_id: str):
+    async def cmd_remove(self, event: AstrMessageEvent, platform: str, channel_id: str = ""):
         origin = event.unified_msg_origin
-        platform = platform.lower()
+        if not channel_id:
+            raw_input = platform.strip()
+            detected = _detect_platform(raw_input)
+            if detected:
+                platform = detected
+                checker = self._get_checker(platform)
+                if checker:
+                    try:
+                        info = await checker.validate_channel(raw_input, self._session)
+                    except RateLimitError as e:
+                        yield event.plain_result(self._t(event, "error.rate_limited", platform=e.platform))
+                        return
+                    except Exception:
+                        info = None
+                    if info:
+                        channel_id = info.channel_id
+                if not channel_id:
+                    yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=platform, channel_id=raw_input))
+                    return
+            else:
+                yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=raw_input, channel_id=""))
+                return
+        else:
+            platform = platform.lower()
 
         async with self._store.lock:
             removed = self._store.remove_monitor(origin, platform, channel_id)
