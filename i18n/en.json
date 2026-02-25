@@ -10,6 +10,7 @@
   "cmd.add.twitch_no_creds": "Twitch credentials not configured. Please set client_id and client_secret in WebUI.",
   "cmd.remove.success": "Removed {platform} monitor: {channel_id}",
   "cmd.remove.not_found": "Monitor not found: {platform} {channel_id}",
+  "cmd.remove.missing_channel": "Missing channel ID. Usage: /live remove {platform} <channel_id>",
   "cmd.list.header": "Monitors for this group:",
   "cmd.list.platform_header": "{platform}",
   "cmd.list.entry": "- {status_emoji} {name} ({display_id})",

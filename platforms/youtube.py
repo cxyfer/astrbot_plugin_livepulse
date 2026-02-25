@@ -119,10 +119,14 @@ class YouTubeChecker(BasePlatformChecker):
             display_id=display_id,
         )
 
+    def extract_id_from_url(self, raw: str) -> str:
+        m = _YT_URL_RE.search(raw)
+        return (m.group(1) or m.group(2)) if m else ""
+
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
-        url_match = _YT_URL_RE.search(channel_id)
-        if url_match:
-            channel_id = url_match.group(1) or url_match.group(2)
+        extracted = self.extract_id_from_url(channel_id)
+        if extracted:
+            channel_id = extracted
         if channel_id.startswith("@"):
             resolved = await self._resolve_handle(channel_id, session)
             if resolved is None:

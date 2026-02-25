@@ -71,7 +71,9 @@ All commands are under the `/live` command group.
 | Command | Description |
 |---------|-------------|
 | `/live add <platform> <channel_id>` | Add a monitor |
+| `/live add <url>` | Add a monitor (auto-detect platform) |
 | `/live remove <platform> <channel_id>` | Remove a monitor |
+| `/live remove <url>` | Remove a monitor (auto-detect platform) |
 | `/live list` | List monitors with current status |
 | `/live check <platform> <channel_id>` | One-off status check |
 | `/live lang <en\|zh-Hans\|zh-Hant>` | Switch response language |
@@ -91,7 +93,7 @@ All commands are under the `/live` command group.
 | Bilibili | `UID` or URL | `672328094`, `https://live.bilibili.com/22637261` |
 
 > [!NOTE]
-> Both `/live add` and `/live remove` accept all formats above. URLs are auto-detected — no need to specify the platform.
+> When using a URL, no platform argument is needed — the platform is auto-detected from the hostname.
 
 **Examples:**
 ```

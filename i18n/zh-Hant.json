@@ -10,6 +10,7 @@
   "cmd.add.twitch_no_creds": "Twitch 憑證未設定，請在 WebUI 中設定 client_id 和 client_secret。",
   "cmd.remove.success": "已移除 {platform} 監控：{channel_id}",
   "cmd.remove.not_found": "未找到監控：{platform} {channel_id}",
+  "cmd.remove.missing_channel": "缺少頻道 ID。用法：/live remove {platform} <頻道ID>",
   "cmd.list.header": "本群監控清單：",
   "cmd.list.platform_header": "{platform}",
   "cmd.list.entry": "- {status_emoji} {name}（{display_id}）",

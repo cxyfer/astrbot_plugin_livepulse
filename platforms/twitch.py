@@ -108,12 +108,17 @@ class TwitchChecker(BasePlatformChecker):
             resp.raise_for_status()
             return await resp.json()
 
+    def extract_id_from_url(self, raw: str) -> str:
+        m = _TWITCH_URL_RE.search(raw)
+        if m:
+            extracted = m.group(1)
+            if extracted.lower() not in _RESERVED_PATHS:
+                return extracted
+        return ""
+
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
-        url_match = _TWITCH_URL_RE.search(channel_id)
-        if url_match:
-            extracted = url_match.group(1)
-            if extracted.lower() in _RESERVED_PATHS:
-                return None
+        extracted = self.extract_id_from_url(channel_id)
+        if extracted:
             channel_id = extracted
         await self._ensure_token(session)
         try:

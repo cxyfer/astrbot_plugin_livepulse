@@ -7,7 +7,7 @@ The system SHALL monitor YouTube channels by scraping the `/channel/{CHANNEL_ID}
 - `https://www.youtube.com/@handle` (with or without scheme, with or without `www.`, with or without `m.`)
 - `https://www.youtube.com/channel/UCxxxxx` (with or without scheme, with or without `www.`, with or without `m.`)
 
-URL extraction SHALL use a module-level regex `_YT_URL_RE` matching `(?:https?://)?(?:www\.)?youtube\.com/(?:(@[\w.-]+)|channel/(UC[\w-]{22}))` with flags `re.IGNORECASE | re.ASCII` (C8). When a URL is detected via `search()`, `validate_channel` SHALL extract the `@handle` or `UC...` channel ID and delegate to the existing `_resolve_handle` or `_get_channel_name` methods respectively. No new HTTP calls SHALL be introduced.
+URL extraction SHALL use a module-level regex `_YT_URL_RE` matching `(?:https?://)?(?:(?:www|m)\.)?youtube\.com/(?:(@[\w.-]+)|channel/(UC[\w-]{22}))` with flag `re.IGNORECASE`. When a URL is detected via `search()`, `validate_channel` SHALL extract the `@handle` or `UC...` channel ID and delegate to the existing `_resolve_handle` or `_get_channel_name` methods respectively. No new HTTP calls SHALL be introduced.
 
 Out of scope: `/user/`, `/c/`, `youtu.be` URL formats (C7).
 
@@ -90,7 +90,7 @@ The system SHALL monitor Twitch channels using `GET https://api.twitch.tv/helix/
 
 URL extraction SHALL use a module-level regex `_TWITCH_URL_RE` matching `(?:https?://)?(?:(?:www|m)\.)?twitch\.tv/([\w]+)` with flags `re.IGNORECASE | re.ASCII` (C8). No `$` anchor — trailing query/fragment/subpaths are ignored (C3). When a URL is detected via `search()`, `validate_channel` SHALL extract the first path segment as the username.
 
-The system SHALL define `_RESERVED_PATHS: frozenset[str] = frozenset({"directory", "settings", "videos", "p"})` (C4). After URL extraction, if the extracted username (lowercased) is in `_RESERVED_PATHS`, `validate_channel` SHALL treat the input as not a valid URL match and fall through to existing logic (which will fail at Helix lookup).
+The system SHALL define `_RESERVED_PATHS: frozenset[str] = frozenset({"directory", "settings", "videos", "p"})` (C4). After URL extraction, if the extracted username (lowercased) is in `_RESERVED_PATHS`, `validate_channel` SHALL return `None` immediately without attempting a Helix lookup.
 
 No new HTTP calls SHALL be introduced.
 
@@ -144,7 +144,7 @@ No new HTTP calls SHALL be introduced.
 #### Scenario: Twitch reserved path rejected
 - **WHEN** `validate_channel` receives `https://www.twitch.tv/directory`
 - **THEN** the system SHALL extract `directory` but reject it via `_RESERVED_PATHS` check (C4)
-- **AND** the input SHALL fall through to existing logic (Helix lookup with `directory` as login, which will return no user)
+- **AND** `validate_channel` SHALL return `None` immediately
 
 #### Scenario: Twitch URL with uppercase host
 - **WHEN** `validate_channel` receives `HTTPS://WWW.TWITCH.TV/SHROUD`

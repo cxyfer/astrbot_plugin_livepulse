@@ -18,6 +18,10 @@ class BasePlatformChecker(ABC):
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
         ...
 
+    def extract_id_from_url(self, raw: str) -> str:
+        """Extract channel/user identifier from a URL without network calls. Returns empty string if not a URL."""
+        return ""
+
 
 class RateLimitError(Exception):
     def __init__(self, platform: str) -> None:
