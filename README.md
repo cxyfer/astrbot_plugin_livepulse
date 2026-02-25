@@ -41,13 +41,13 @@ After installation, configure in AstrBot WebUI:
 
 > YouTube and Bilibili require no credentials.
 
+> [!NOTE]
+> Twitch account must have **Two-Factor Authentication (2FA)** enabled before creating an application.
+
 <details>
 <summary>Twitch setup — obtaining Client ID & Secret</summary>
 
 Twitch monitoring requires a [Twitch Developer Application](https://dev.twitch.tv/console).
-
-> [!NOTE]
-> Your Twitch account must have **Two-Factor Authentication (2FA)** enabled before you can create an application.
 
 1. Go to the [Twitch Developer Console](https://dev.twitch.tv/console)
 2. Log in with your Twitch account
