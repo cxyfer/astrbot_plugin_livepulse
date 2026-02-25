@@ -22,6 +22,7 @@ from core.notifier import Notifier
 from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
 from core.store import Store
+from core.batch import preprocess, detect_mode, process_batch_add, process_batch_remove, BatchResult, MAX_BATCH_SIZE
 from i18n import I18nManager
 from platforms.base import RateLimitError
 from platforms.bilibili import BilibiliChecker
@@ -169,6 +170,52 @@ class LivePulsePlugin(Star):
     def _st(self, event: AstrMessageEvent, value: bool) -> str:
         return self._t(event, "common.on" if value else "common.off")
 
+    def _parse_batch_args(self, event: AstrMessageEvent, subcommand: str) -> list[str]:
+        raw = event.message_str.strip()
+        prefix = f"live {subcommand}"
+        for p in (f"/{prefix}", prefix):
+            if raw.lower().startswith(p):
+                raw = raw[len(p):].strip()
+                break
+        return raw.split() if raw else []
+
+    def _format_batch_response(
+        self, event: AstrMessageEvent, result: BatchResult,
+        op: str, max_per_group: int, max_global: int,
+    ) -> str:
+        success = sum(1 for r in result.items if r.status in ("success", "removed"))
+        fail = len(result.items) - success
+        summary_key = "cmd.batch.summary_add" if op == "add" else "cmd.batch.summary_remove"
+        lines = [self._t(event, summary_key, success=success, fail=fail)]
+
+        for r in result.items:
+            if r.status == "success" and r.info:
+                lines.append(self._t(event, "cmd.batch.item_success",
+                    platform=r.info.platform, name=r.info.channel_name, channel_id=r.info.channel_id))
+            elif r.status == "removed":
+                lines.append(self._t(event, "cmd.batch.item_removed",
+                    platform=r.platform, identifier=r.identifier))
+            elif r.status == "duplicate":
+                lines.append(self._t(event, "cmd.batch.item_duplicate", identifier=r.identifier))
+            elif r.status == "not_found":
+                lines.append(self._t(event, "cmd.batch.item_not_found", identifier=r.identifier))
+            elif r.status == "limit_group":
+                lines.append(self._t(event, "cmd.batch.item_limit_group",
+                    identifier=r.identifier, limit=max_per_group))
+            elif r.status == "limit_global":
+                lines.append(self._t(event, "cmd.batch.item_limit_global",
+                    identifier=r.identifier, limit=max_global))
+            elif r.status in ("rate_limited", "internal_error"):
+                reason = "rate limited" if r.status == "rate_limited" else "internal error"
+                lines.append(self._t(event, "cmd.batch.item_fail",
+                    identifier=r.identifier, reason=reason))
+
+        if result.truncated > 0:
+            lines.append(self._t(event, "cmd.batch.truncated",
+                count=result.truncated, max=MAX_BATCH_SIZE))
+
+        return "\n".join(lines)
+
     # --- commands ---
 
     @filter.command_group("live")
@@ -176,135 +223,85 @@ class LivePulsePlugin(Star):
         pass
 
     @live.command("add")
-    async def cmd_add(self, event: AstrMessageEvent, platform: str, channel_id: str = ""):
+    async def cmd_add(self, event: AstrMessageEvent, platform: str = "", channel_id: str = ""):
         origin = event.unified_msg_origin
-        if not channel_id:
-            raw_input = platform.strip()
-            detected = _detect_platform(raw_input)
-            if detected:
-                platform, channel_id = detected, raw_input
-            elif "." in raw_input and "/" in raw_input:
-                yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
-                return
-            else:
-                platform = raw_input.lower()
-                if platform in _VALID_PLATFORMS:
-                    yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_input))
-                    return
-                yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
-                return
-        else:
-            platform = platform.lower()
-            if platform not in _VALID_PLATFORMS:
-                yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
-                return
-
-        checker = self._get_checker(platform)
-        if checker is None:
-            yield event.plain_result(self._t(event, "cmd.add.twitch_no_creds"))
+        raw_args = self._parse_batch_args(event, "add")
+        if not raw_args:
+            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=""))
             return
 
         try:
-            info = await checker.validate_channel(channel_id, self._session)
-        except RateLimitError as e:
-            yield event.plain_result(self._t(event, "error.rate_limited", platform=e.platform))
-            return
-        except Exception as e:
-            logger.warning(f"validate_channel failed for {platform}/{channel_id}: {e}")
-            yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=channel_id))
-            return
-        if info is None:
-            if platform == "bilibili" and not channel_id.isdigit() and "live.bilibili.com" not in channel_id:
-                yield event.plain_result(self._t(event, "cmd.add.bilibili_hint"))
+            mode, items = detect_mode(raw_args, _VALID_PLATFORMS, _detect_platform)
+        except ValueError as e:
+            if str(e) == "mixed_mode":
+                yield event.plain_result(self._t(event, "cmd.batch.mixed_mode"))
+            elif str(e) == "no_ids":
+                yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_args[0]))
             else:
-                yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=channel_id))
+                raw = raw_args[0]
+                if "." in raw and "/" in raw:
+                    yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
+                elif raw.lower() in _VALID_PLATFORMS:
+                    yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw))
+                else:
+                    yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=raw))
             return
+
+        items, truncated = preprocess(items)
+        if not items:
+            yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_args[0]))
+            return
+
+        for item in items:
+            if self._get_checker(item.platform) is None:
+                yield event.plain_result(self._t(event, "cmd.add.twitch_no_creds"))
+                return
 
         max_per_group = self.config.get("max_monitors_per_group", 30)
         max_global = self.config.get("max_global_channels", 500)
 
-        async with self._store.lock:
-            err = self._store.add_monitor(origin, platform, info, max_per_group, max_global)
-            if err:
-                if "limit_group" in err:
-                    yield event.plain_result(self._t(event, err, limit=max_per_group))
-                elif "limit_global" in err:
-                    yield event.plain_result(self._t(event, err, limit=max_global))
-                elif "duplicate" in err:
-                    yield event.plain_result(self._t(event, err, name=info.channel_name, channel_id=info.channel_id))
-                return
-
-            try:
-                statuses = await checker.check_status([info.channel_id], self._session)
-                snap = statuses.get(info.channel_id)
-                if snap and snap.success:
-                    status_str = "live" if snap.is_live else "offline"
-                    self._store.update_status(origin, platform, info.channel_id, status_str, snap.stream_id)
-                    entry = self._store.get_group(origin).monitors[platform][info.channel_id]
-                    if snap.display_id:
-                        entry.display_id = snap.display_id
-            except Exception as e:
-                logger.debug(f"Immediate check failed for {platform}/{info.channel_id}: {e}")
-
-            await self._store.persist()
-
-        yield event.plain_result(self._t(event, "cmd.add.success", platform=platform, name=info.channel_name, channel_id=info.channel_id))
+        result = await process_batch_add(
+            self._store, origin, items, self._checkers, self._session,
+            max_per_group, max_global,
+        )
+        result.truncated = truncated
+        yield event.plain_result(self._format_batch_response(event, result, "add", max_per_group, max_global))
 
     @live.command("remove")
-    async def cmd_remove(self, event: AstrMessageEvent, platform: str, channel_id: str = ""):
+    async def cmd_remove(self, event: AstrMessageEvent, platform: str = "", channel_id: str = ""):
         origin = event.unified_msg_origin
-        if not channel_id:
-            raw_input = platform.strip()
-            detected = _detect_platform(raw_input)
-            if detected:
-                platform = detected
-                # Try local extraction first (no network needed)
-                checker = self._get_checker(platform)
-                extracted_id = ""
-                if checker:
-                    extracted_id = checker.extract_id_from_url(raw_input)
-                if extracted_id:
-                    channel_id = extracted_id
-                else:
-                    # Fallback: network validation
-                    if checker:
-                        try:
-                            info = await checker.validate_channel(raw_input, self._session)
-                        except RateLimitError as e:
-                            yield event.plain_result(self._t(event, "error.rate_limited", platform=e.platform))
-                            return
-                        except Exception:
-                            info = None
-                        if info:
-                            channel_id = info.channel_id
-                    if not channel_id:
-                        yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=platform, channel_id=raw_input))
-                        return
+        raw_args = self._parse_batch_args(event, "remove")
+        if not raw_args:
+            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=""))
+            return
+
+        try:
+            mode, items = detect_mode(raw_args, _VALID_PLATFORMS, _detect_platform)
+        except ValueError as e:
+            if str(e) == "mixed_mode":
+                yield event.plain_result(self._t(event, "cmd.batch.mixed_mode"))
+            elif str(e) == "no_ids":
+                yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw_args[0].lower()))
             else:
-                raw_lower = raw_input.lower()
-                if raw_lower in _VALID_PLATFORMS:
-                    yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw_lower))
-                elif "." in raw_input and "/" in raw_input:
+                raw = raw_args[0]
+                if raw.lower() in _VALID_PLATFORMS:
+                    yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw.lower()))
+                elif "." in raw and "/" in raw:
                     yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
                 else:
-                    yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=raw_input, channel_id=raw_input))
-                return
-        else:
-            platform = platform.lower()
+                    yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=raw, channel_id=raw))
+            return
 
-        async with self._store.lock:
-            removed = self._store.remove_monitor(origin, platform, channel_id)
-            if not removed:
-                resolved = self._store.lookup_by_display_id(origin, platform, channel_id)
-                if resolved:
-                    removed = self._store.remove_monitor(origin, platform, resolved)
-            if removed:
-                await self._store.persist()
+        items, truncated = preprocess(items)
+        if not items:
+            yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw_args[0].lower()))
+            return
 
-        if removed:
-            yield event.plain_result(self._t(event, "cmd.remove.success", platform=platform, channel_id=channel_id))
-        else:
-            yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=platform, channel_id=channel_id))
+        result = await process_batch_remove(
+            self._store, origin, items, self._checkers, self._session,
+        )
+        result.truncated = truncated
+        yield event.plain_result(self._format_batch_response(event, result, "remove", 0, 0))
 
     @live.command("list")
     async def cmd_list(self, event: AstrMessageEvent):

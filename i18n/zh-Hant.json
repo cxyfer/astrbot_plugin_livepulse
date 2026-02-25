@@ -50,5 +50,16 @@
   "cmd.test_notify.invalid_delay": "無效的延遲值。請提供正整數（例如 /live test_notify 10）。",
   "cmd.test_notify.delay_too_long": "延遲過長，最大值為 {max} 秒。",
   "cmd.test_notify.not_ready": "外掛尚未就緒，請等待初始化完成。",
-  "cmd.test_notify.already_pending": "本群已有一個測試通知正在等待發送。"
+  "cmd.test_notify.already_pending": "本群已有一個測試通知正在等待發送。",
+  "cmd.batch.summary_add": "新增：{success} 成功，{fail} 失敗",
+  "cmd.batch.summary_remove": "移除：{success} 成功，{fail} 失敗",
+  "cmd.batch.item_success": "  ✅ {platform} | {name}（{channel_id}）",
+  "cmd.batch.item_duplicate": "  ⚠️ {identifier}：已在監控中",
+  "cmd.batch.item_removed": "  ✅ {platform} | {identifier}",
+  "cmd.batch.item_not_found": "  ❌ {identifier}：找不到頻道",
+  "cmd.batch.item_fail": "  ❌ {identifier}：{reason}",
+  "cmd.batch.item_limit_group": "  ❌ {identifier}：群組監控數已達上限（{limit}）",
+  "cmd.batch.item_limit_global": "  ❌ {identifier}：全域頻道數已達上限（{limit}）",
+  "cmd.batch.truncated": "⚠ 已跳過 {count} 個輸入（上限 {max}）",
+  "cmd.batch.mixed_mode": "不能在同一命令中混用平台+ID 和 URL 格式。"
 }

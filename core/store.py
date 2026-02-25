@@ -96,6 +96,21 @@ class Store:
                     del self.reverse_index[platform]
         return True
 
+    async def add_monitors_batch(
+        self, origin: str, items: list[tuple[str, ChannelInfo]],
+        max_per_group: int, max_global: int,
+    ) -> list[str | None]:
+        async with self.lock:
+            results = [self.add_monitor(origin, p, info, max_per_group, max_global) for p, info in items]
+            await self.persist()
+            return results
+
+    async def remove_monitors_batch(self, origin: str, items: list[tuple[str, str]]) -> list[bool]:
+        async with self.lock:
+            results = [self.remove_monitor(origin, p, cid) for p, cid in items]
+            await self.persist()
+            return results
+
     def set_language(self, origin: str, lang: str) -> None:
         self._ensure_group(origin).language = lang
 

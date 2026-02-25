@@ -50,5 +50,16 @@
   "cmd.test_notify.invalid_delay": "Invalid delay. Please provide a positive integer (e.g., /live test_notify 10).",
   "cmd.test_notify.delay_too_long": "Delay too long. Maximum is {max} seconds.",
   "cmd.test_notify.not_ready": "Plugin not ready. Please wait for initialization.",
-  "cmd.test_notify.already_pending": "A test notification is already pending for this group."
+  "cmd.test_notify.already_pending": "A test notification is already pending for this group.",
+  "cmd.batch.summary_add": "Add: {success} succeeded, {fail} failed",
+  "cmd.batch.summary_remove": "Remove: {success} succeeded, {fail} failed",
+  "cmd.batch.item_success": "  ✅ {platform} | {name} ({channel_id})",
+  "cmd.batch.item_duplicate": "  ⚠️ {identifier}: already monitored",
+  "cmd.batch.item_removed": "  ✅ {platform} | {identifier}",
+  "cmd.batch.item_not_found": "  ❌ {identifier}: channel not found",
+  "cmd.batch.item_fail": "  ❌ {identifier}: {reason}",
+  "cmd.batch.item_limit_group": "  ❌ {identifier}: group limit reached ({limit})",
+  "cmd.batch.item_limit_global": "  ❌ {identifier}: global limit reached ({limit})",
+  "cmd.batch.truncated": "⚠ {count} inputs skipped (max {max})",
+  "cmd.batch.mixed_mode": "Cannot mix platform+ID and URL formats in one command."
 }

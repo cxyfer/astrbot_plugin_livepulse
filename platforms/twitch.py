@@ -123,9 +123,11 @@ class TwitchChecker(BasePlatformChecker):
         await self._ensure_token(session)
         try:
             data = await self._get_with_retry(session, _USERS_URL, [("login", channel_id)])
+        except RateLimitError:
+            raise
         except Exception as e:
             logger.warning(f"Twitch validate failed for {channel_id}: {e}")
-            return None
+            raise
         users = data.get("data", [])
         if not users:
             return None

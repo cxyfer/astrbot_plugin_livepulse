@@ -50,5 +50,16 @@
   "cmd.test_notify.invalid_delay": "无效的延迟值。请提供正整数（例如 /live test_notify 10）。",
   "cmd.test_notify.delay_too_long": "延迟过长，最大值为 {max} 秒。",
   "cmd.test_notify.not_ready": "插件尚未就绪，请等待初始化完成。",
-  "cmd.test_notify.already_pending": "本群已有一个测试通知正在等待发送。"
+  "cmd.test_notify.already_pending": "本群已有一个测试通知正在等待发送。",
+  "cmd.batch.summary_add": "添加：{success} 成功，{fail} 失败",
+  "cmd.batch.summary_remove": "移除：{success} 成功，{fail} 失败",
+  "cmd.batch.item_success": "  ✅ {platform} | {name}（{channel_id}）",
+  "cmd.batch.item_duplicate": "  ⚠️ {identifier}：已在监控中",
+  "cmd.batch.item_removed": "  ✅ {platform} | {identifier}",
+  "cmd.batch.item_not_found": "  ❌ {identifier}：找不到频道",
+  "cmd.batch.item_fail": "  ❌ {identifier}：{reason}",
+  "cmd.batch.item_limit_group": "  ❌ {identifier}：群组监控数已达上限（{limit}）",
+  "cmd.batch.item_limit_global": "  ❌ {identifier}：全局频道数已达上限（{limit}）",
+  "cmd.batch.truncated": "⚠ 已跳过 {count} 个输入（上限 {max}）",
+  "cmd.batch.mixed_mode": "不能在同一命令中混用平台+ID 和 URL 格式。"
 }
