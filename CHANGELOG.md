@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.2 (2026-02-25)
+
+### ✨ New Features
+
+- **Redesign Discord embed**: show streamer name in embed title, use emoji-prefixed fields for stream details, and add footer with platform info
+
+---
+
 ## v1.1.1 (2026-02-25)
 
 ### 🐛 Bug Fixes
