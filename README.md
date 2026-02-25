@@ -39,7 +39,29 @@ After installation, configure in AstrBot WebUI:
 | `enable_end_notifications` | bool | `true` | Global end-of-stream notifications |
 | `include_thumbnail` | bool | `true` | Include thumbnail in notifications |
 
-> Twitch monitoring requires a [Twitch Developer Application](https://dev.twitch.tv/console). YouTube and Bilibili require no credentials.
+> YouTube and Bilibili require no credentials.
+
+<details>
+<summary>Twitch setup — obtaining Client ID & Secret</summary>
+
+Twitch monitoring requires a [Twitch Developer Application](https://dev.twitch.tv/console).
+
+> [!NOTE]
+> Your Twitch account must have **Two-Factor Authentication (2FA)** enabled before you can create an application.
+
+1. Go to the [Twitch Developer Console](https://dev.twitch.tv/console)
+2. Log in with your Twitch account
+3. Click **Register Your Application**
+4. Fill in the form:
+   - **Name** — any name (e.g. `LivePulse`)
+   - **OAuth Redirect URLs** — `http://localhost`
+   - **Category** — `Chat Bot`
+   - **Client Type** — `Confidential`
+5. After creation, open the application details to copy the **Client ID**
+6. Click **New Secret** to generate a **Client Secret**
+7. Enter both values in the AstrBot WebUI plugin configuration
+
+</details>
 
 ## Commands
 
