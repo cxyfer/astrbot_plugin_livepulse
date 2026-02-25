@@ -24,6 +24,6 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Run `test_notify` command on a Discord channel to confirm live-start embed renders correctly (title with name, emoji fields, footer with name+ID, Link field)
-- [ ] 5.2 Confirm live-end embed renders correctly (title with name, single Platform field, footer with name+ID)
-- [ ] 5.3 Confirm plain-text notification path is unaffected (test on a non-Discord platform or with `DiscordEmbed=None`)
+- [x] 5.1 Run `test_notify` command on a Discord channel to confirm live-start embed renders correctly (title with name, emoji fields, footer with name+ID, Link field)
+- [x] 5.2 Confirm live-end embed renders correctly (title with name, single Platform field, footer with name+ID)
+- [x] 5.3 Confirm plain-text notification path is unaffected (test on a non-Discord platform or with `DiscordEmbed=None`)
