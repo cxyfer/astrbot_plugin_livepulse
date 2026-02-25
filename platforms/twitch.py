@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 
 from aiohttp import ClientSession, ClientTimeout
@@ -14,6 +15,11 @@ _TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 _STREAMS_URL = "https://api.twitch.tv/helix/streams"
 _USERS_URL = "https://api.twitch.tv/helix/users"
 _BATCH_SIZE = 100
+_TWITCH_URL_RE = re.compile(
+    r"(?:https?://)?(?:(?:www|m)\.)?twitch\.tv/([\w]+)",
+    re.IGNORECASE | re.ASCII,
+)
+_RESERVED_PATHS: frozenset[str] = frozenset({"directory", "settings", "videos", "p"})
 
 
 class TwitchChecker(BasePlatformChecker):
@@ -102,7 +108,18 @@ class TwitchChecker(BasePlatformChecker):
             resp.raise_for_status()
             return await resp.json()
 
+    def extract_id_from_url(self, raw: str) -> str:
+        m = _TWITCH_URL_RE.search(raw)
+        if m:
+            extracted = m.group(1)
+            if extracted.lower() not in _RESERVED_PATHS:
+                return extracted
+        return ""
+
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+        extracted = self.extract_id_from_url(channel_id)
+        if extracted:
+            channel_id = extracted
         await self._ensure_token(session)
         try:
             data = await self._get_with_retry(session, _USERS_URL, [("login", channel_id)])

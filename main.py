@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import aiohttp
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -29,7 +29,27 @@ from platforms.twitch import TwitchChecker
 from platforms.youtube import YouTubeChecker
 
 _VALID_PLATFORMS = ("youtube", "twitch", "bilibili")
+_HOST_PLATFORM_MAP: dict[str, str] = {
+    "youtube.com": "youtube",
+    "www.youtube.com": "youtube",
+    "m.youtube.com": "youtube",
+    "twitch.tv": "twitch",
+    "www.twitch.tv": "twitch",
+    "m.twitch.tv": "twitch",
+    "live.bilibili.com": "bilibili",
+}
 _DATA_DIR = Path(os.path.expanduser("~")) / ".astrbot" / "livepulse"
+
+
+def _detect_platform(raw: str) -> str | None:
+    url = raw if "://" in raw else f"https://{raw}"
+    try:
+        host = urlparse(url).hostname
+    except ValueError:
+        return None
+    if host is None:
+        return None
+    return _HOST_PLATFORM_MAP.get(host.lower())
 
 
 @register("astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.2")
@@ -156,12 +176,28 @@ class LivePulsePlugin(Star):
         pass
 
     @live.command("add")
-    async def cmd_add(self, event: AstrMessageEvent, platform: str, channel_id: str):
+    async def cmd_add(self, event: AstrMessageEvent, platform: str, channel_id: str = ""):
         origin = event.unified_msg_origin
-        platform = platform.lower()
-        if platform not in _VALID_PLATFORMS:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
-            return
+        if not channel_id:
+            raw_input = platform.strip()
+            detected = _detect_platform(raw_input)
+            if detected:
+                platform, channel_id = detected, raw_input
+            elif "." in raw_input and "/" in raw_input:
+                yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
+                return
+            else:
+                platform = raw_input.lower()
+                if platform in _VALID_PLATFORMS:
+                    yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_input))
+                    return
+                yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
+                return
+        else:
+            platform = platform.lower()
+            if platform not in _VALID_PLATFORMS:
+                yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
+                return
 
         checker = self._get_checker(platform)
         if checker is None:
@@ -215,9 +251,46 @@ class LivePulsePlugin(Star):
         yield event.plain_result(self._t(event, "cmd.add.success", platform=platform, name=info.channel_name, channel_id=info.channel_id))
 
     @live.command("remove")
-    async def cmd_remove(self, event: AstrMessageEvent, platform: str, channel_id: str):
+    async def cmd_remove(self, event: AstrMessageEvent, platform: str, channel_id: str = ""):
         origin = event.unified_msg_origin
-        platform = platform.lower()
+        if not channel_id:
+            raw_input = platform.strip()
+            detected = _detect_platform(raw_input)
+            if detected:
+                platform = detected
+                # Try local extraction first (no network needed)
+                checker = self._get_checker(platform)
+                extracted_id = ""
+                if checker:
+                    extracted_id = checker.extract_id_from_url(raw_input)
+                if extracted_id:
+                    channel_id = extracted_id
+                else:
+                    # Fallback: network validation
+                    if checker:
+                        try:
+                            info = await checker.validate_channel(raw_input, self._session)
+                        except RateLimitError as e:
+                            yield event.plain_result(self._t(event, "error.rate_limited", platform=e.platform))
+                            return
+                        except Exception:
+                            info = None
+                        if info:
+                            channel_id = info.channel_id
+                    if not channel_id:
+                        yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=platform, channel_id=raw_input))
+                        return
+            else:
+                raw_lower = raw_input.lower()
+                if raw_lower in _VALID_PLATFORMS:
+                    yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw_lower))
+                elif "." in raw_input and "/" in raw_input:
+                    yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
+                else:
+                    yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=raw_input, channel_id=raw_input))
+                return
+        else:
+            platform = platform.lower()
 
         async with self._store.lock:
             removed = self._store.remove_monitor(origin, platform, channel_id)

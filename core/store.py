@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from urllib.parse import unquote
 
 from astrbot.api import logger
 
@@ -153,5 +154,7 @@ class Store:
             return None
         for cid, entry in gs.monitors.get(platform, {}).items():
             if entry.display_id == display_id:
+                return cid
+            if entry.display_id and unquote(entry.display_id) == display_id:
                 return cid
         return None

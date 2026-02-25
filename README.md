@@ -70,8 +70,10 @@ All commands are under the `/live` command group.
 
 | Command | Description |
 |---------|-------------|
-| `/live add <platform> <channel_id>` | Add a monitor (supports YouTube `@handle`) |
+| `/live add <platform> <channel_id>` | Add a monitor |
+| `/live add <url>` | Add a monitor (auto-detect platform) |
 | `/live remove <platform> <channel_id>` | Remove a monitor |
+| `/live remove <url>` | Remove a monitor (auto-detect platform) |
 | `/live list` | List monitors with current status |
 | `/live check <platform> <channel_id>` | One-off status check |
 | `/live lang <en\|zh-Hans\|zh-Hant>` | Switch response language |
@@ -86,16 +88,21 @@ All commands are under the `/live` command group.
 
 | Platform | Accepted Formats | Examples |
 |----------|-----------------|----------|
-| YouTube | `@handle` or `channel_id` | `@GawrGura`, `UCoSrY_IQQVpmIRZ9Xf-y93g` |
-| Twitch | `username` | `shroud` |
-| Bilibili | `UID` or `https://live.bilibili.com/{room_id}` | `672328094`, `https://live.bilibili.com/22637261` |
+| YouTube | `@handle`, `channel_id`, or URL | `@GawrGura`, `UCoSrY_IQQVpmIRZ9Xf-y93g`, `https://www.youtube.com/@GawrGura` |
+| Twitch | `username` or URL | `shroud`, `https://www.twitch.tv/shroud` |
+| Bilibili | `UID` or URL | `672328094`, `https://live.bilibili.com/22637261` |
+
+> [!NOTE]
+> When using a URL, no platform argument is needed — the platform is auto-detected from the hostname.
 
 **Examples:**
 ```
 /live add youtube @GawrGura
 /live add twitch shroud
 /live add bilibili 672328094
-/live add bilibili https://live.bilibili.com/22637261
+/live add https://live.bilibili.com/22637261
+/live remove https://www.youtube.com/@GawrGura
+/live remove youtube @GawrGura
 /live list
 /live lang zh-Hant
 ```
