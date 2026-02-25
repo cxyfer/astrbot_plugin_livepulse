@@ -66,6 +66,7 @@ class Notifier:
         global_enable: bool,
         global_end_enable: bool,
         *,
+        display_id: str = "",
         force: bool = False,
     ) -> None:
         if not force and not self._should_notify(origin, global_enable, Transition.LIVE_END, global_end_enable):
@@ -74,7 +75,7 @@ class Notifier:
         lang = self._store.get_language(origin)
         if DiscordEmbed is not None and self._is_discord_origin(origin):
             try:
-                chain = self._build_end_embed(lang, platform, streamer_name)
+                chain = self._build_end_embed(lang, platform, streamer_name, display_id)
                 await self._send_chain(origin, chain, track_failure=track)
                 return
             except Exception:
@@ -134,6 +135,15 @@ class Notifier:
         return inst is not None and inst.meta().name == "discord"
 
     @staticmethod
+    def _truncate_title(template: str, name: str) -> str:
+        budget = 256 - len(template.format(name=""))
+        if budget <= 0:
+            return template.format(name="")[:256]
+        if len(name) > budget:
+            name = name[: budget - 1] + "\u2026"
+        return template.format(name=name)
+
+    @staticmethod
     def _make_embed(**kwargs: object) -> DiscordEmbed:
         embed = DiscordEmbed.__new__(DiscordEmbed)
         object.__setattr__(embed, "type", "discord_embed")
@@ -142,31 +152,44 @@ class Notifier:
         return embed
 
     def _build_live_embed(self, lang: str, platform: str, snapshot: StatusSnapshot) -> MessageChain:
+        template = self._i18n.get(lang, "notify.embed.live_title")
+        title = self._truncate_title(template, snapshot.streamer_name)
+        display_id = snapshot.display_id or snapshot.streamer_name
+        footer = self._i18n.get(lang, "notify.embed.footer", name=snapshot.streamer_name, id=display_id.lstrip("@"))
+
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
-        if snapshot.category:
+        if snapshot.category and snapshot.category.strip():
             fields.append({"name": self._i18n.get(lang, "notify.embed.field.category"), "value": snapshot.category, "inline": True})
+        stream_url = snapshot.stream_url
+        if stream_url and stream_url.strip():
+            fields.append({"name": self._i18n.get(lang, "notify.embed.field.link"), "value": stream_url, "inline": False})
+
         embed = self._make_embed(
-            title=self._i18n.get(lang, "notify.embed.live_title"),
+            title=title,
             description=snapshot.title,
             color=0x57F287,
-            url=snapshot.stream_url,
+            url=stream_url if stream_url and stream_url.strip() else None,
             thumbnail=snapshot.thumbnail_url or None,
             image=None,
-            footer=snapshot.streamer_name,
+            footer=footer,
             fields=fields,
         )
         return MessageChain(chain=[embed])
 
-    def _build_end_embed(self, lang: str, platform: str, streamer_name: str) -> MessageChain:
+    def _build_end_embed(self, lang: str, platform: str, streamer_name: str, display_id: str = "") -> MessageChain:
+        template = self._i18n.get(lang, "notify.embed.end_title")
+        title = self._truncate_title(template, streamer_name)
+        footer = self._i18n.get(lang, "notify.embed.footer", name=streamer_name, id=(display_id or streamer_name).lstrip("@"))
+
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
         embed = self._make_embed(
-            title=self._i18n.get(lang, "notify.embed.end_title"),
+            title=title,
             description="",
             color=0x95A5A6,
-            url="",
+            url=None,
             thumbnail=None,
             image=None,
-            footer=streamer_name,
+            footer=footer,
             fields=fields,
         )
         return MessageChain(chain=[embed])

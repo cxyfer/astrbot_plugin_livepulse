@@ -35,6 +35,7 @@ class _PendingNotification:
     platform: str
     snapshot: StatusSnapshot
     streamer_name: str
+    display_id: str = ""
 
 
 class PlatformPoller:
@@ -157,6 +158,7 @@ class PlatformPoller:
                             platform=self._platform,
                             snapshot=status,
                             streamer_name=status.streamer_name,
+                            display_id=entry.display_id,
                         ))
 
             await self._store.persist()
@@ -170,6 +172,7 @@ class PlatformPoller:
                 await self._notifier.send_end_notification(
                     note.origin, note.platform, note.streamer_name,
                     self._global_notify, self._global_end_notify,
+                    display_id=note.display_id,
                 )
 
     @staticmethod

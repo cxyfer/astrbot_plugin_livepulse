@@ -460,10 +460,11 @@ class LivePulsePlugin(Star):
                 category="Just Chatting",
                 stream_url="https://example.com/test",
                 thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
+                display_id="TestStreamer",
             )
             await self._notifier.send_live_notification(origin, "test", snapshot, global_enable=True, force=True)
             await asyncio.sleep(1)
-            await self._notifier.send_end_notification(origin, "test", "Test Streamer", global_enable=True, global_end_enable=True, force=True)
+            await self._notifier.send_end_notification(origin, "test", "Test Streamer", global_enable=True, global_end_enable=True, display_id="TestStreamer", force=True)
         except asyncio.CancelledError:
             logger.info(f"test_notify task cancelled for {origin}")
             raise
