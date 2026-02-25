@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import aiohttp
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -29,7 +29,27 @@ from platforms.twitch import TwitchChecker
 from platforms.youtube import YouTubeChecker
 
 _VALID_PLATFORMS = ("youtube", "twitch", "bilibili")
+_HOST_PLATFORM_MAP: dict[str, str] = {
+    "youtube.com": "youtube",
+    "www.youtube.com": "youtube",
+    "m.youtube.com": "youtube",
+    "twitch.tv": "twitch",
+    "www.twitch.tv": "twitch",
+    "m.twitch.tv": "twitch",
+    "live.bilibili.com": "bilibili",
+}
 _DATA_DIR = Path(os.path.expanduser("~")) / ".astrbot" / "livepulse"
+
+
+def _detect_platform(raw: str) -> str | None:
+    url = raw if "://" in raw else f"https://{raw}"
+    try:
+        host = urlparse(url).hostname
+    except Exception:
+        return None
+    if host is None:
+        return None
+    return _HOST_PLATFORM_MAP.get(host.lower())
 
 
 @register("astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.2")
@@ -156,12 +176,28 @@ class LivePulsePlugin(Star):
         pass
 
     @live.command("add")
-    async def cmd_add(self, event: AstrMessageEvent, platform: str, channel_id: str):
+    async def cmd_add(self, event: AstrMessageEvent, platform: str, channel_id: str = ""):
         origin = event.unified_msg_origin
-        platform = platform.lower()
-        if platform not in _VALID_PLATFORMS:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
-            return
+        if not channel_id:
+            raw_input = platform.strip()
+            detected = _detect_platform(raw_input)
+            if detected:
+                platform, channel_id = detected, raw_input
+            elif "." in raw_input and "/" in raw_input:
+                yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
+                return
+            else:
+                platform = raw_input.lower()
+                if platform in _VALID_PLATFORMS:
+                    yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_input))
+                    return
+                yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
+                return
+        else:
+            platform = platform.lower()
+            if platform not in _VALID_PLATFORMS:
+                yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
+                return
 
         checker = self._get_checker(platform)
         if checker is None:

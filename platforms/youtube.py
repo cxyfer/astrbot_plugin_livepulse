@@ -19,6 +19,10 @@ _OG_URL_CID_RE = re.compile(
 )
 _OG_TITLE_RE = re.compile(r'<meta\s+property="og:title"\s+content="([^"]+)"', re.I)
 _CANONICAL_BASE_RE = re.compile(r'"canonicalBaseUrl"\s*:\s*"/(@[^"]+)"')
+_YT_URL_RE = re.compile(
+    r"(?:https?://)?(?:(?:www|m)\.)?youtube\.com/(?:(@[\w.-]+)|channel/(UC[\w-]{22}))",
+    re.IGNORECASE | re.ASCII,
+)
 
 
 class YouTubeChecker(BasePlatformChecker):
@@ -116,6 +120,9 @@ class YouTubeChecker(BasePlatformChecker):
         )
 
     async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+        url_match = _YT_URL_RE.search(channel_id)
+        if url_match:
+            channel_id = url_match.group(1) or url_match.group(2)
         if channel_id.startswith("@"):
             resolved = await self._resolve_handle(channel_id, session)
             if resolved is None:

@@ -3,6 +3,7 @@
   "cmd.add.duplicate": "监控已存在：{name}（{channel_id}）",
   "cmd.add.invalid_platform": "无效平台：{platform}。可用：youtube、twitch、bilibili",
   "cmd.add.invalid_channel": "找不到频道：{channel_id}",
+  "cmd.add.unrecognized_url": "无法识别的 URL。支持：youtube.com、twitch.tv、live.bilibili.com",
   "cmd.add.bilibili_hint": "Bilibili 需要数字 UID 或直播间链接（如 live.bilibili.com/60989），暂不支持用户名搜索。",
   "cmd.add.limit_group": "群组监控数已达上限（{limit}）",
   "cmd.add.limit_global": "全局频道数已达上限（{limit}）",
