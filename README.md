@@ -81,11 +81,20 @@ All commands are under the `/live` command group.
 
 **Platform identifiers:** `youtube`, `twitch`, `bilibili`
 
+**Supported channel ID formats:**
+
+| Platform | Accepted Formats | Examples |
+|----------|-----------------|----------|
+| YouTube | `@handle` or `channel_id` | `@GawrGura`, `UCoSrY_IQQVpmIRZ9Xf-y93g` |
+| Twitch | `username` | `shroud` |
+| Bilibili | `UID` or `https://live.bilibili.com/{room_id}` | `672328094`, `https://live.bilibili.com/22637261` |
+
 **Examples:**
 ```
-/live add youtube @PewDiePie
+/live add youtube @GawrGura
 /live add twitch shroud
 /live add bilibili 672328094
+/live add bilibili https://live.bilibili.com/22637261
 /live list
 /live lang zh-Hant
 ```
