@@ -21,7 +21,7 @@ _OG_TITLE_RE = re.compile(r'<meta\s+property="og:title"\s+content="([^"]+)"', re
 _CANONICAL_BASE_RE = re.compile(r'"canonicalBaseUrl"\s*:\s*"/(@[^"]+)"')
 _YT_URL_RE = re.compile(
     r"(?:https?://)?(?:(?:www|m)\.)?youtube\.com/(?:(@[\w.-]+)|channel/(UC[\w-]{22}))",
-    re.IGNORECASE | re.ASCII,
+    re.IGNORECASE,
 )
 
 
