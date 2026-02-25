@@ -39,9 +39,7 @@ After installation, configure in AstrBot WebUI:
 | `enable_end_notifications` | bool | `true` | Global end-of-stream notifications |
 | `include_thumbnail` | bool | `true` | Include thumbnail in notifications |
 
-> YouTube and Bilibili require no credentials.
-
-> [!NOTE]
+> [!IMPORTANT]
 > Twitch account must have **Two-Factor Authentication (2FA)** enabled before creating an application.
 
 <details>
@@ -62,6 +60,9 @@ Twitch monitoring requires a [Twitch Developer Application](https://dev.twitch.t
 7. Enter both values in the AstrBot WebUI plugin configuration
 
 </details>
+
+> [!NOTE]
+> YouTube and Bilibili require no credentials.
 
 ## Commands
 
