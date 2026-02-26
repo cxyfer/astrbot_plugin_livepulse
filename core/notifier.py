@@ -151,11 +151,30 @@ class Notifier:
             object.__setattr__(embed, k, v)
         return embed
 
+    def _format_streamer_name(self, platform: str, snapshot: StatusSnapshot) -> str:
+        """Format streamer name with platform-specific rules."""
+        name = snapshot.streamer_name or ""
+        display_id = (snapshot.display_id or "").lstrip("@")
+        login_name = (snapshot.login_name or "").lstrip("@")
+
+        if platform == "bilibili":
+            uid = display_id or ""
+            if uid:
+                return f"@{name} ({uid})"
+            return f"@{name}" if name else ""
+
+        if platform == "twitch":
+            if login_name and name.lower() != login_name.lower():
+                return f"{name} (@{login_name})"
+            return name
+
+        return name
+
     def _build_live_embed(self, lang: str, platform: str, snapshot: StatusSnapshot) -> MessageChain:
         template = self._i18n.get(lang, "notify.embed.live_title")
         title = self._truncate_title(template, snapshot.streamer_name)
-        display_id = snapshot.display_id or snapshot.streamer_name
-        footer = self._i18n.get(lang, "notify.embed.footer", name=snapshot.streamer_name, id=display_id.lstrip("@"))
+        formatted_name = self._format_streamer_name(platform, snapshot)
+        footer = formatted_name
 
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
         if snapshot.category and snapshot.category.strip():
@@ -179,7 +198,16 @@ class Notifier:
     def _build_end_embed(self, lang: str, platform: str, streamer_name: str, display_id: str = "") -> MessageChain:
         template = self._i18n.get(lang, "notify.embed.end_title")
         title = self._truncate_title(template, streamer_name)
-        footer = self._i18n.get(lang, "notify.embed.footer", name=streamer_name, id=(display_id or streamer_name).lstrip("@"))
+        login_name = (display_id or "").lstrip("@")
+        if platform == "bilibili":
+            if login_name:
+                footer = f"@{streamer_name} ({login_name})"
+            else:
+                footer = f"@{streamer_name}"
+        elif platform == "twitch" and login_name and streamer_name.lower() != login_name.lower():
+            footer = f"{streamer_name} (@{login_name})"
+        else:
+            footer = streamer_name
 
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
         embed = self._make_embed(
