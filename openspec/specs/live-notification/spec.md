@@ -248,7 +248,8 @@ The `test_notify` command SHALL pass `display_id="TestStreamer"` when calling `s
 The system SHALL format streamer names differently based on the platform type.
 
 For **Bilibili**:
-- Format: `@{streamer_name} ({display_id})`
+- Format: `@{streamer_name} ({display_id})` when `display_id` is present
+- Fallback: `@{streamer_name}` when `display_id` is empty
 - Example: `@嘉然今天吃什么 (672328094)`
 
 For **Twitch**:
@@ -259,6 +260,8 @@ For **Twitch**:
   - Different name: `日本語配信者 (@japanese_streamer)`
 
 The formatting logic SHALL be implemented in `Notifier._format_streamer_name()` method.
+
+**Empty name handling**: When `streamer_name` is empty or `None`, the formatter SHALL return an empty string to avoid malformed output like `"@ (uid)"`.
 
 #### Scenario: Poller passes display_id to end notification
 - **WHEN** a LIVE_END transition is detected
