@@ -63,6 +63,7 @@ class BilibiliChecker(BasePlatformChecker):
                     thumbnail_url=info.get("cover_from_user", ""),
                     streamer_name=info.get("uname", uid),
                     stream_url=f"https://live.bilibili.com/{room_id}" if room_id else "",
+                    display_id=uid,
                 )
         return results
 

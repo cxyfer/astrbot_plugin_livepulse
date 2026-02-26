@@ -83,6 +83,7 @@ class TwitchChecker(BasePlatformChecker):
                     results[uid] = StatusSnapshot(is_live=False, streamer_name=uid)
                     continue
                 thumb = stream.get("thumbnail_url", "").replace("{width}", "640").replace("{height}", "360")
+                user_login = stream.get("user_login", "").lower()
                 results[uid] = StatusSnapshot(
                     is_live=True,
                     stream_id=stream.get("id", ""),
@@ -91,6 +92,8 @@ class TwitchChecker(BasePlatformChecker):
                     thumbnail_url=thumb,
                     streamer_name=stream.get("user_name", uid),
                     stream_url=f"https://www.twitch.tv/{uid}",
+                    display_id=user_login,
+                    login_name=user_login,
                 )
         return results
 
