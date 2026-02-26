@@ -42,6 +42,7 @@ class StatusSnapshot:
     stream_url: str = ""
     success: bool = True
     display_id: str | None = None
+    login_name: str | None = None
 
 
 @dataclass
