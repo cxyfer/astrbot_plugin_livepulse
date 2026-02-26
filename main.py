@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import os
+import shutil
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -10,6 +10,7 @@ import aiohttp
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
+from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
 # Ensure plugin root is on sys.path for relative imports
 _PLUGIN_DIR = Path(__file__).resolve().parent
@@ -44,7 +45,6 @@ _HOST_PLATFORM_MAP: dict[str, str] = {
     "m.twitch.tv": "twitch",
     "live.bilibili.com": "bilibili",
 }
-_DATA_DIR = Path(os.path.expanduser("~")) / ".astrbot" / "livepulse"
 
 
 def _detect_platform(raw: str) -> str | None:
@@ -58,6 +58,17 @@ def _detect_platform(raw: str) -> str | None:
     return _HOST_PLATFORM_MAP.get(host.lower())
 
 
+_LEGACY_DATA_PATH = Path.home() / ".astrbot" / "livepulse"
+
+
+def _migrate_legacy_data(new_dir: Path) -> None:
+    """One-time migration: move data from legacy ~/.astrbot/livepulse/ to official plugin_data convention."""
+    if new_dir.exists() or not _LEGACY_DATA_PATH.exists():
+        return
+    shutil.move(str(_LEGACY_DATA_PATH), str(new_dir))
+    logger.info(f"Migrated plugin data: {_LEGACY_DATA_PATH} → {new_dir}")
+
+
 @register(
     "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.3"
 )
@@ -66,7 +77,9 @@ class LivePulsePlugin(Star):
         super().__init__(context)
         self.config = config
 
-        self._persistence = PersistenceManager(_DATA_DIR)
+        data_dir = get_astrbot_data_path() / "plugin_data" / self.name
+        _migrate_legacy_data(data_dir)
+        self._persistence = PersistenceManager(data_dir)
         self._i18n = I18nManager(_PLUGIN_DIR / "i18n")
         self._store = Store(
             self._persistence, default_language=config.get("default_language", "en")
