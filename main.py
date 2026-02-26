@@ -59,7 +59,7 @@ def _detect_platform(raw: str) -> str | None:
 
 
 @register(
-    "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.2"
+    "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.3"
 )
 class LivePulsePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig) -> None:

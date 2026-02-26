@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.1.3 (2026-02-26)
+
+### ✨ New Features
+
+- **Batch add/remove channels**: support multiple channel IDs in `/live add` and `/live remove` commands
+- **URL auto-detect platform**: automatically detect platform from URL in `/live add` and `/live remove`
+- **Platform-specific username formatting**: show @username for Twitch/YouTube, 暱稱 (@ID) for Bilibili
+
+### 🧪 Tests
+
+- Add unit and integration tests for batch processing
+
+### 📝 Documentation
+
+- Add Twitch app registration guide with 2FA note
+- Add supported channel ID formats table and Bilibili URL example
+- Reorder credential notes and upgrade Twitch 2FA callout level
+
+### 🎨 Style
+
+- Format codebase with ruff
+
+---
+
 ## v1.1.2 (2026-02-25)
 
 ### ✨ New Features
