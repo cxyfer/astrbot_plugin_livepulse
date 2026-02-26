@@ -74,7 +74,7 @@ class TwitchChecker(BasePlatformChecker):
 
             live_map: dict[str, dict] = {}
             for stream in data.get("data", []):
-                login = stream.get("user_login", "").lower()
+                login = (stream.get("user_login") or "").lower()
                 live_map[login] = stream
 
             for uid in chunk:
@@ -83,7 +83,7 @@ class TwitchChecker(BasePlatformChecker):
                     results[uid] = StatusSnapshot(is_live=False, streamer_name=uid)
                     continue
                 thumb = stream.get("thumbnail_url", "").replace("{width}", "640").replace("{height}", "360")
-                user_login = stream.get("user_login", "").lower()
+                user_login = (stream.get("user_login") or uid).lower()
                 results[uid] = StatusSnapshot(
                     is_live=True,
                     stream_id=stream.get("id", ""),

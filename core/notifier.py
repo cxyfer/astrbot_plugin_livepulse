@@ -154,14 +154,16 @@ class Notifier:
     def _format_streamer_name(self, platform: str, snapshot: StatusSnapshot) -> str:
         """Format streamer name with platform-specific rules."""
         name = snapshot.streamer_name or ""
+        if not name:
+            return ""
+
         display_id = (snapshot.display_id or "").lstrip("@")
         login_name = (snapshot.login_name or "").lstrip("@")
 
         if platform == "bilibili":
-            uid = display_id or ""
-            if uid:
-                return f"@{name} ({uid})"
-            return f"@{name}" if name else ""
+            if display_id:
+                return f"@{name} ({display_id})"
+            return f"@{name}"
 
         if platform == "twitch":
             if login_name and name.lower() != login_name.lower():
@@ -198,16 +200,15 @@ class Notifier:
     def _build_end_embed(self, lang: str, platform: str, streamer_name: str, display_id: str = "") -> MessageChain:
         template = self._i18n.get(lang, "notify.embed.end_title")
         title = self._truncate_title(template, streamer_name)
-        login_name = (display_id or "").lstrip("@")
-        if platform == "bilibili":
-            if login_name:
-                footer = f"@{streamer_name} ({login_name})"
-            else:
-                footer = f"@{streamer_name}"
-        elif platform == "twitch" and login_name and streamer_name.lower() != login_name.lower():
-            footer = f"{streamer_name} (@{login_name})"
-        else:
-            footer = streamer_name
+        # Reuse formatting logic by creating a snapshot with available data
+        # For Twitch, display_id passed here is the login_name
+        snapshot = StatusSnapshot(
+            is_live=False,
+            streamer_name=streamer_name,
+            display_id=display_id,
+            login_name=display_id if platform == "twitch" else None,
+        )
+        footer = self._format_streamer_name(platform, snapshot)
 
         fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
         embed = self._make_embed(
