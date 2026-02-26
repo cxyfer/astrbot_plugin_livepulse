@@ -83,10 +83,10 @@ All commands are under the `/live` command group.
 
 | Command | Description |
 |---------|-------------|
-| `/live add <platform> <channel_id>` | Add a monitor |
-| `/live add <url>` | Add a monitor (auto-detect platform) |
-| `/live remove <platform> <channel_id>` | Remove a monitor |
-| `/live remove <url>` | Remove a monitor (auto-detect platform) |
+| `/live add <platform> <channel_id> [<channel_id>...]` | Add monitor(s) |
+| `/live add <url> [<url>...]` | Add monitor(s) (auto-detect platform) |
+| `/live remove <platform> <channel_id> [<channel_id>...]` | Remove monitor(s) |
+| `/live remove <url> [<url>...]` | Remove monitor(s) (auto-detect platform) |
 | `/live list` | List monitors with current status |
 | `/live check <platform> <channel_id>` | One-off status check |
 | `/live lang <en\|zh-Hans\|zh-Hant>` | Switch response language |
@@ -109,13 +109,25 @@ All commands are under the `/live` command group.
 > When using a URL, no platform argument is needed — the platform is auto-detected from the hostname.
 
 **Examples:**
+
 ```
+# Single add
 /live add youtube @GawrGura
 /live add twitch shroud
 /live add bilibili 672328094
 /live add https://live.bilibili.com/22637261
+
+# Batch add (up to 20)
+/live add youtube @NanashiMumei @GawrGura
+/live add twitch shroud pokimane
+/live add bilibili 672328094 22637261
+/live add https://www.youtube.com/@GawrGura https://live.bilibili.com/22637261
+
+# Remove
 /live remove https://www.youtube.com/@GawrGura
 /live remove youtube @GawrGura
+
+# Other commands
 /live list
 /live lang zh-Hant
 ```
