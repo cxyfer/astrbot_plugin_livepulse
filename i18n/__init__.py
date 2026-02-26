@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 _LOCALE_ALIASES: dict[str, str] = {"zh": "zh-Hans"}
 
 

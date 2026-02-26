@@ -4,10 +4,9 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-
-import aiohttp
 from urllib.parse import unquote, urlparse
 
+import aiohttp
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
@@ -17,14 +16,20 @@ _PLUGIN_DIR = Path(__file__).resolve().parent
 if str(_PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_DIR))
 
+from core.batch import (
+    MAX_BATCH_SIZE,
+    BatchResult,
+    detect_mode,
+    preprocess,
+    process_batch_add,
+    process_batch_remove,
+)
 from core.models import STATUS_EMOJI, StatusSnapshot
 from core.notifier import Notifier
 from core.persistence import PersistenceManager
 from core.poller import PlatformPoller
 from core.store import Store
-from core.batch import preprocess, detect_mode, process_batch_add, process_batch_remove, BatchResult, MAX_BATCH_SIZE
 from i18n import I18nManager
-from platforms.base import RateLimitError
 from platforms.bilibili import BilibiliChecker
 from platforms.twitch import TwitchChecker
 from platforms.youtube import YouTubeChecker
@@ -53,7 +58,9 @@ def _detect_platform(raw: str) -> str | None:
     return _HOST_PLATFORM_MAP.get(host.lower())
 
 
-@register("astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.2")
+@register(
+    "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.2"
+)
 class LivePulsePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig) -> None:
         super().__init__(context)
@@ -61,7 +68,9 @@ class LivePulsePlugin(Star):
 
         self._persistence = PersistenceManager(_DATA_DIR)
         self._i18n = I18nManager(_PLUGIN_DIR / "i18n")
-        self._store = Store(self._persistence, default_language=config.get("default_language", "en"))
+        self._store = Store(
+            self._persistence, default_language=config.get("default_language", "en")
+        )
 
         self._checkers: dict[str, YouTubeChecker | TwitchChecker | BilibiliChecker] = {}
         self._pollers: list[PlatformPoller] = []
@@ -82,20 +91,30 @@ class LivePulsePlugin(Star):
         data = self._persistence.load()
         self._store.load(data)
 
-        self._session = aiohttp.ClientSession(headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        })
+        self._session = aiohttp.ClientSession(
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+            }
+        )
 
-        self._checkers["youtube"] = YouTubeChecker(timeout=self.config.get("youtube_timeout", 20))
-        self._checkers["bilibili"] = BilibiliChecker(timeout=self.config.get("bilibili_timeout", 10))
+        self._checkers["youtube"] = YouTubeChecker(
+            timeout=self.config.get("youtube_timeout", 20)
+        )
+        self._checkers["bilibili"] = BilibiliChecker(
+            timeout=self.config.get("bilibili_timeout", 10)
+        )
 
         client_id = self.config.get("twitch_client_id", "")
         client_secret = self.config.get("twitch_client_secret", "")
         if client_id and client_secret:
-            self._checkers["twitch"] = TwitchChecker(client_id, client_secret, timeout=self.config.get("twitch_timeout", 10))
+            self._checkers["twitch"] = TwitchChecker(
+                client_id, client_secret, timeout=self.config.get("twitch_timeout", 10)
+            )
 
         notifier = Notifier(
-            self.context, self._store, self._i18n,
+            self.context,
+            self._store,
+            self._i18n,
             include_thumbnail=self.config.get("include_thumbnail", True),
         )
         self._notifier = notifier
@@ -164,7 +183,9 @@ class LivePulsePlugin(Star):
     def _t(self, event: AstrMessageEvent, key: str, **kwargs: object) -> str:
         return self._i18n.get(self._lang(event), key, **kwargs)
 
-    def _get_checker(self, platform: str) -> YouTubeChecker | TwitchChecker | BilibiliChecker | None:
+    def _get_checker(
+        self, platform: str
+    ) -> YouTubeChecker | TwitchChecker | BilibiliChecker | None:
         return self._checkers.get(platform)
 
     def _st(self, event: AstrMessageEvent, value: bool) -> str:
@@ -175,44 +196,93 @@ class LivePulsePlugin(Star):
         prefix = f"live {subcommand}"
         for p in (f"/{prefix}", prefix):
             if raw.lower().startswith(p):
-                raw = raw[len(p):].strip()
+                raw = raw[len(p) :].strip()
                 break
         return raw.split() if raw else []
 
     def _format_batch_response(
-        self, event: AstrMessageEvent, result: BatchResult,
-        op: str, max_per_group: int, max_global: int,
+        self,
+        event: AstrMessageEvent,
+        result: BatchResult,
+        op: str,
+        max_per_group: int,
+        max_global: int,
     ) -> str:
         success = sum(1 for r in result.items if r.status in ("success", "removed"))
         fail = len(result.items) - success
-        summary_key = "cmd.batch.summary_add" if op == "add" else "cmd.batch.summary_remove"
+        summary_key = (
+            "cmd.batch.summary_add" if op == "add" else "cmd.batch.summary_remove"
+        )
         lines = [self._t(event, summary_key, success=success, fail=fail)]
 
         for r in result.items:
             if r.status == "success" and r.info:
-                lines.append(self._t(event, "cmd.batch.item_success",
-                    platform=r.info.platform, name=r.info.channel_name, channel_id=r.info.channel_id))
+                lines.append(
+                    self._t(
+                        event,
+                        "cmd.batch.item_success",
+                        platform=r.info.platform,
+                        name=r.info.channel_name,
+                        channel_id=r.info.channel_id,
+                    )
+                )
             elif r.status == "removed":
-                lines.append(self._t(event, "cmd.batch.item_removed",
-                    platform=r.platform, identifier=r.identifier))
+                lines.append(
+                    self._t(
+                        event,
+                        "cmd.batch.item_removed",
+                        platform=r.platform,
+                        identifier=r.identifier,
+                    )
+                )
             elif r.status == "duplicate":
-                lines.append(self._t(event, "cmd.batch.item_duplicate", identifier=r.identifier))
+                lines.append(
+                    self._t(event, "cmd.batch.item_duplicate", identifier=r.identifier)
+                )
             elif r.status == "not_found":
-                lines.append(self._t(event, "cmd.batch.item_not_found", identifier=r.identifier))
+                lines.append(
+                    self._t(event, "cmd.batch.item_not_found", identifier=r.identifier)
+                )
             elif r.status == "limit_group":
-                lines.append(self._t(event, "cmd.batch.item_limit_group",
-                    identifier=r.identifier, limit=max_per_group))
+                lines.append(
+                    self._t(
+                        event,
+                        "cmd.batch.item_limit_group",
+                        identifier=r.identifier,
+                        limit=max_per_group,
+                    )
+                )
             elif r.status == "limit_global":
-                lines.append(self._t(event, "cmd.batch.item_limit_global",
-                    identifier=r.identifier, limit=max_global))
+                lines.append(
+                    self._t(
+                        event,
+                        "cmd.batch.item_limit_global",
+                        identifier=r.identifier,
+                        limit=max_global,
+                    )
+                )
             elif r.status in ("rate_limited", "internal_error"):
-                reason = "rate limited" if r.status == "rate_limited" else "internal error"
-                lines.append(self._t(event, "cmd.batch.item_fail",
-                    identifier=r.identifier, reason=reason))
+                reason = (
+                    "rate limited" if r.status == "rate_limited" else "internal error"
+                )
+                lines.append(
+                    self._t(
+                        event,
+                        "cmd.batch.item_fail",
+                        identifier=r.identifier,
+                        reason=reason,
+                    )
+                )
 
         if result.truncated > 0:
-            lines.append(self._t(event, "cmd.batch.truncated",
-                count=result.truncated, max=MAX_BATCH_SIZE))
+            lines.append(
+                self._t(
+                    event,
+                    "cmd.batch.truncated",
+                    count=result.truncated,
+                    max=MAX_BATCH_SIZE,
+                )
+            )
 
         return "\n".join(lines)
 
@@ -223,11 +293,15 @@ class LivePulsePlugin(Star):
         pass
 
     @live.command("add")
-    async def cmd_add(self, event: AstrMessageEvent, platform: str = "", channel_id: str = ""):
+    async def cmd_add(
+        self, event: AstrMessageEvent, platform: str = "", channel_id: str = ""
+    ):
         origin = event.unified_msg_origin
         raw_args = self._parse_batch_args(event, "add")
         if not raw_args:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=""))
+            yield event.plain_result(
+                self._t(event, "cmd.add.invalid_platform", platform="")
+            )
             return
 
         try:
@@ -236,20 +310,28 @@ class LivePulsePlugin(Star):
             if str(e) == "mixed_mode":
                 yield event.plain_result(self._t(event, "cmd.batch.mixed_mode"))
             elif str(e) == "no_ids":
-                yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_args[0]))
+                yield event.plain_result(
+                    self._t(event, "cmd.add.invalid_channel", channel_id=raw_args[0])
+                )
             else:
                 raw = raw_args[0]
                 if "." in raw and "/" in raw:
                     yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
                 elif raw.lower() in _VALID_PLATFORMS:
-                    yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw))
+                    yield event.plain_result(
+                        self._t(event, "cmd.add.invalid_channel", channel_id=raw)
+                    )
                 else:
-                    yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=raw))
+                    yield event.plain_result(
+                        self._t(event, "cmd.add.invalid_platform", platform=raw)
+                    )
             return
 
         items, truncated = preprocess(items)
         if not items:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_channel", channel_id=raw_args[0]))
+            yield event.plain_result(
+                self._t(event, "cmd.add.invalid_channel", channel_id=raw_args[0])
+            )
             return
 
         for item in items:
@@ -261,18 +343,29 @@ class LivePulsePlugin(Star):
         max_global = self.config.get("max_global_channels", 500)
 
         result = await process_batch_add(
-            self._store, origin, items, self._checkers, self._session,
-            max_per_group, max_global,
+            self._store,
+            origin,
+            items,
+            self._checkers,
+            self._session,
+            max_per_group,
+            max_global,
         )
         result.truncated = truncated
-        yield event.plain_result(self._format_batch_response(event, result, "add", max_per_group, max_global))
+        yield event.plain_result(
+            self._format_batch_response(event, result, "add", max_per_group, max_global)
+        )
 
     @live.command("remove")
-    async def cmd_remove(self, event: AstrMessageEvent, platform: str = "", channel_id: str = ""):
+    async def cmd_remove(
+        self, event: AstrMessageEvent, platform: str = "", channel_id: str = ""
+    ):
         origin = event.unified_msg_origin
         raw_args = self._parse_batch_args(event, "remove")
         if not raw_args:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=""))
+            yield event.plain_result(
+                self._t(event, "cmd.add.invalid_platform", platform="")
+            )
             return
 
         try:
@@ -281,27 +374,51 @@ class LivePulsePlugin(Star):
             if str(e) == "mixed_mode":
                 yield event.plain_result(self._t(event, "cmd.batch.mixed_mode"))
             elif str(e) == "no_ids":
-                yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw_args[0].lower()))
+                yield event.plain_result(
+                    self._t(
+                        event,
+                        "cmd.remove.missing_channel",
+                        platform=raw_args[0].lower(),
+                    )
+                )
             else:
                 raw = raw_args[0]
                 if raw.lower() in _VALID_PLATFORMS:
-                    yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw.lower()))
+                    yield event.plain_result(
+                        self._t(
+                            event, "cmd.remove.missing_channel", platform=raw.lower()
+                        )
+                    )
                 elif "." in raw and "/" in raw:
                     yield event.plain_result(self._t(event, "cmd.add.unrecognized_url"))
                 else:
-                    yield event.plain_result(self._t(event, "cmd.remove.not_found", platform=raw, channel_id=raw))
+                    yield event.plain_result(
+                        self._t(
+                            event, "cmd.remove.not_found", platform=raw, channel_id=raw
+                        )
+                    )
             return
 
         items, truncated = preprocess(items)
         if not items:
-            yield event.plain_result(self._t(event, "cmd.remove.missing_channel", platform=raw_args[0].lower()))
+            yield event.plain_result(
+                self._t(
+                    event, "cmd.remove.missing_channel", platform=raw_args[0].lower()
+                )
+            )
             return
 
         result = await process_batch_remove(
-            self._store, origin, items, self._checkers, self._session,
+            self._store,
+            origin,
+            items,
+            self._checkers,
+            self._session,
         )
         result.truncated = truncated
-        yield event.plain_result(self._format_batch_response(event, result, "remove", 0, 0))
+        yield event.plain_result(
+            self._format_batch_response(event, result, "remove", 0, 0)
+        )
 
     @live.command("list")
     async def cmd_list(self, event: AstrMessageEvent):
@@ -322,10 +439,22 @@ class LivePulsePlugin(Star):
                 status = entry.last_status if entry.initialized else "unknown"
                 emoji = STATUS_EMOJI.get(status, "❓")
                 try:
-                    did = unquote(entry.display_id, errors="strict") if entry.display_id else entry.display_id
+                    did = (
+                        unquote(entry.display_id, errors="strict")
+                        if entry.display_id
+                        else entry.display_id
+                    )
                 except Exception:
                     did = entry.display_id
-                section.append(self._t(event, "cmd.list.entry", status_emoji=emoji, name=entry.channel_name, display_id=did))
+                section.append(
+                    self._t(
+                        event,
+                        "cmd.list.entry",
+                        status_emoji=emoji,
+                        name=entry.channel_name,
+                        display_id=did,
+                    )
+                )
             sections.append("\n".join(section))
         lines.append("\n\n".join(sections))
         yield event.plain_result("\n".join(lines))
@@ -334,7 +463,9 @@ class LivePulsePlugin(Star):
     async def cmd_check(self, event: AstrMessageEvent, platform: str, channel_id: str):
         platform = platform.lower()
         if platform not in _VALID_PLATFORMS:
-            yield event.plain_result(self._t(event, "cmd.add.invalid_platform", platform=platform))
+            yield event.plain_result(
+                self._t(event, "cmd.add.invalid_platform", platform=platform)
+            )
             return
 
         checker = self._get_checker(platform)
@@ -348,7 +479,14 @@ class LivePulsePlugin(Star):
             except Exception:
                 info = None
             if info is None:
-                yield event.plain_result(self._t(event, "cmd.check.unknown", platform=platform, channel_id=channel_id))
+                yield event.plain_result(
+                    self._t(
+                        event,
+                        "cmd.check.unknown",
+                        platform=platform,
+                        channel_id=channel_id,
+                    )
+                )
                 return
             resolved_id = info.channel_id
         else:
@@ -362,17 +500,34 @@ class LivePulsePlugin(Star):
 
         snap = statuses.get(resolved_id)
         if snap is None:
-            yield event.plain_result(self._t(event, "cmd.check.unknown", platform=platform, channel_id=channel_id))
+            yield event.plain_result(
+                self._t(
+                    event, "cmd.check.unknown", platform=platform, channel_id=channel_id
+                )
+            )
             return
 
         if snap.is_live:
-            yield event.plain_result(self._t(
-                event, "cmd.check.live",
-                name=snap.streamer_name, platform=platform, title=snap.title,
-                category=snap.category or "-", url=snap.stream_url,
-            ))
+            yield event.plain_result(
+                self._t(
+                    event,
+                    "cmd.check.live",
+                    name=snap.streamer_name,
+                    platform=platform,
+                    title=snap.title,
+                    category=snap.category or "-",
+                    url=snap.stream_url,
+                )
+            )
         else:
-            yield event.plain_result(self._t(event, "cmd.check.offline", name=snap.streamer_name, platform=platform))
+            yield event.plain_result(
+                self._t(
+                    event,
+                    "cmd.check.offline",
+                    name=snap.streamer_name,
+                    platform=platform,
+                )
+            )
 
     @live.command("lang")
     async def cmd_lang(self, event: AstrMessageEvent, lang: str):
@@ -398,13 +553,16 @@ class LivePulsePlugin(Star):
             group_on = gs.notify_enabled if gs else True
             failures = gs.send_failure_count if gs else 0
             effective = self._global_notify and group_on
-            yield event.plain_result(self._t(
-                event, "cmd.notify.status",
-                global_st=self._st(event, self._global_notify),
-                group_st=self._st(event, group_on),
-                failures=failures,
-                effective=self._st(event, effective),
-            ))
+            yield event.plain_result(
+                self._t(
+                    event,
+                    "cmd.notify.status",
+                    global_st=self._st(event, self._global_notify),
+                    group_st=self._st(event, group_on),
+                    failures=failures,
+                    effective=self._st(event, effective),
+                )
+            )
             return
 
         arg = arg.lower()
@@ -432,18 +590,23 @@ class LivePulsePlugin(Star):
             group_end = gs.end_notify_enabled if gs else True
             notify_effective = self._global_notify and group_notify
             effective = notify_effective and self._global_end_notify and group_end
-            yield event.plain_result(self._t(
-                event, "cmd.end_notify.status",
-                global_st=self._st(event, self._global_end_notify),
-                group_st=self._st(event, group_end),
-                notify_st=self._st(event, notify_effective),
-                effective=self._st(event, effective),
-            ))
+            yield event.plain_result(
+                self._t(
+                    event,
+                    "cmd.end_notify.status",
+                    global_st=self._st(event, self._global_end_notify),
+                    group_st=self._st(event, group_end),
+                    notify_st=self._st(event, notify_effective),
+                    effective=self._st(event, effective),
+                )
+            )
             return
 
         arg = arg.lower()
         if arg not in ("on", "off"):
-            yield event.plain_result(self._t(event, "cmd.end_notify.invalid", value=arg))
+            yield event.plain_result(
+                self._t(event, "cmd.end_notify.invalid", value=arg)
+            )
             return
 
         enabled = arg == "on"
@@ -479,11 +642,14 @@ class LivePulsePlugin(Star):
         group_end = gs.end_notify_enabled if gs else True
         notify_eff = self._global_notify and group_notify
         end_eff = notify_eff and self._global_end_notify and group_end
-        lines.append(self._t(
-            event, "cmd.status.notify_summary",
-            notify_st=self._st(event, notify_eff),
-            end_st=self._st(event, end_eff),
-        ))
+        lines.append(
+            self._t(
+                event,
+                "cmd.status.notify_summary",
+                notify_st=self._st(event, notify_eff),
+                end_st=self._st(event, end_eff),
+            )
+        )
         yield event.plain_result("\n".join(lines))
 
     @live.command("test_notify")
@@ -507,18 +673,27 @@ class LivePulsePlugin(Star):
             return
 
         if delay_int > 300:
-            yield event.plain_result(self._t(event, "cmd.test_notify.delay_too_long", max=300))
+            yield event.plain_result(
+                self._t(event, "cmd.test_notify.delay_too_long", max=300)
+            )
             return
 
         origin = event.unified_msg_origin
-        if any(t.get_name() == f"test_notify:{origin}" and not t.done() for t in self._bg_tasks):
+        if any(
+            t.get_name() == f"test_notify:{origin}" and not t.done()
+            for t in self._bg_tasks
+        ):
             yield event.plain_result(self._t(event, "cmd.test_notify.already_pending"))
             return
 
-        task = asyncio.create_task(self._run_test_notify(origin, delay_int), name=f"test_notify:{origin}")
+        task = asyncio.create_task(
+            self._run_test_notify(origin, delay_int), name=f"test_notify:{origin}"
+        )
         self._bg_tasks.add(task)
         task.add_done_callback(self._bg_tasks.discard)
-        yield event.plain_result(self._t(event, "cmd.test_notify.scheduled", delay=delay_int))
+        yield event.plain_result(
+            self._t(event, "cmd.test_notify.scheduled", delay=delay_int)
+        )
 
     async def _run_test_notify(self, origin: str, delay: int) -> None:
         try:
@@ -532,9 +707,19 @@ class LivePulsePlugin(Star):
                 thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
                 display_id="TestStreamer",
             )
-            await self._notifier.send_live_notification(origin, "test", snapshot, global_enable=True, force=True)
+            await self._notifier.send_live_notification(
+                origin, "test", snapshot, global_enable=True, force=True
+            )
             await asyncio.sleep(1)
-            await self._notifier.send_end_notification(origin, "test", "Test Streamer", global_enable=True, global_end_enable=True, display_id="TestStreamer", force=True)
+            await self._notifier.send_end_notification(
+                origin,
+                "test",
+                "Test Streamer",
+                global_enable=True,
+                global_end_enable=True,
+                display_id="TestStreamer",
+                force=True,
+            )
         except asyncio.CancelledError:
             logger.info(f"test_notify task cancelled for {origin}")
             raise

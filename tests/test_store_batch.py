@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from core.models import ChannelInfo, GroupState
+from core.models import ChannelInfo
 from core.store import Store
 
 
@@ -74,7 +73,9 @@ class TestRemoveMonitorsBatch:
     @pytest.mark.asyncio
     async def test_single_lock_and_persist(self):
         store = _make_store()
-        await store.add_monitors_batch("g1", [("twitch", _info("a")), ("twitch", _info("b"))], 30, 500)
+        await store.add_monitors_batch(
+            "g1", [("twitch", _info("a")), ("twitch", _info("b"))], 30, 500
+        )
         store._persistence.save.reset_mock()
 
         lock_count = {"acquired": 0}
@@ -86,7 +87,9 @@ class TestRemoveMonitorsBatch:
 
         store.lock.acquire = counting_acquire
 
-        results = await store.remove_monitors_batch("g1", [("twitch", "a"), ("twitch", "b")])
+        results = await store.remove_monitors_batch(
+            "g1", [("twitch", "a"), ("twitch", "b")]
+        )
 
         assert lock_count["acquired"] == 1
         assert store._persistence.save.call_count == 1
@@ -95,7 +98,9 @@ class TestRemoveMonitorsBatch:
     @pytest.mark.asyncio
     async def test_reverse_index_after_remove(self):
         store = _make_store()
-        await store.add_monitors_batch("g1", [("twitch", _info("a")), ("twitch", _info("b"))], 30, 500)
+        await store.add_monitors_batch(
+            "g1", [("twitch", _info("a")), ("twitch", _info("b"))], 30, 500
+        )
         await store.remove_monitors_batch("g1", [("twitch", "a")])
 
         assert "a" not in store.reverse_index.get("twitch", {})

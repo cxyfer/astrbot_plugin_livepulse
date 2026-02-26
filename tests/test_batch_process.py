@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from core.batch import (
-    BatchItem, process_batch_add, process_batch_remove, _SEM_LIMIT,
+    _SEM_LIMIT,
+    BatchItem,
+    process_batch_add,
+    process_batch_remove,
 )
 from core.models import ChannelInfo
 from platforms.base import RateLimitError
 
-
 # --- fixtures ---
+
 
 def _make_store(monitors=None):
     store = MagicMock()
@@ -50,6 +53,7 @@ def _info(cid: str, name: str = "", platform: str = "twitch") -> ChannelInfo:
 
 # ===== 6.3 process_batch_add tests =====
 
+
 class TestProcessBatchAdd:
     @pytest.mark.asyncio
     async def test_all_success(self):
@@ -66,15 +70,21 @@ class TestProcessBatchAdd:
 
     @pytest.mark.asyncio
     async def test_partial_failure(self):
-        checkers = {"twitch": _make_checker(
-            results={"a": _info("a")},
-            raise_for={"b": RateLimitError("twitch"), "c": RuntimeError("boom")},
-        )}
+        checkers = {
+            "twitch": _make_checker(
+                results={"a": _info("a")},
+                raise_for={"b": RateLimitError("twitch"), "c": RuntimeError("boom")},
+            )
+        }
         store = _make_store()
         store.add_monitors_batch.return_value = [None]
 
-        items = [BatchItem("twitch", "a"), BatchItem("twitch", "b"),
-                 BatchItem("twitch", "c"), BatchItem("twitch", "d")]
+        items = [
+            BatchItem("twitch", "a"),
+            BatchItem("twitch", "b"),
+            BatchItem("twitch", "c"),
+            BatchItem("twitch", "d"),
+        ]
         result = await process_batch_add(store, "g1", items, checkers, None, 30, 500)
 
         statuses = {r.identifier: r.status for r in result.items}
@@ -85,11 +95,17 @@ class TestProcessBatchAdd:
 
     @pytest.mark.asyncio
     async def test_limit_group_mid_batch(self):
-        checkers = {"twitch": _make_checker({"a": _info("a"), "b": _info("b"), "c": _info("c")})}
+        checkers = {
+            "twitch": _make_checker({"a": _info("a"), "b": _info("b"), "c": _info("c")})
+        }
         store = _make_store()
         store.add_monitors_batch.return_value = [None, None, "cmd.add.limit_group"]
 
-        items = [BatchItem("twitch", "a"), BatchItem("twitch", "b"), BatchItem("twitch", "c")]
+        items = [
+            BatchItem("twitch", "a"),
+            BatchItem("twitch", "b"),
+            BatchItem("twitch", "c"),
+        ]
         result = await process_batch_add(store, "g1", items, checkers, None, 2, 500)
 
         statuses = {r.identifier: r.status for r in result.items}
@@ -135,6 +151,7 @@ class TestProcessBatchAdd:
 
 # ===== 6.4 process_batch_remove tests =====
 
+
 class TestProcessBatchRemove:
     @pytest.mark.asyncio
     async def test_all_found(self):
@@ -159,13 +176,19 @@ class TestProcessBatchRemove:
 
     @pytest.mark.asyncio
     async def test_url_mode_with_network_resolution(self):
-        checker = _make_checker(results={"https://live.bilibili.com/123": _info("uid456", platform="bilibili")})
+        checker = _make_checker(
+            results={
+                "https://live.bilibili.com/123": _info("uid456", platform="bilibili")
+            }
+        )
         checker.extract_id_from_url.return_value = ""
         store = _make_store(monitors={"bilibili": {"uid456": MagicMock()}})
         store.remove_monitors_batch.return_value = [True]
 
         items = [BatchItem("bilibili", "https://live.bilibili.com/123")]
-        result = await process_batch_remove(store, "g1", items, {"bilibili": checker}, None)
+        result = await process_batch_remove(
+            store, "g1", items, {"bilibili": checker}, None
+        )
 
         assert result.items[0].status == "removed"
 
@@ -183,11 +206,15 @@ class TestProcessBatchRemove:
 
     @pytest.mark.asyncio
     async def test_url_network_error_classified(self):
-        checker = _make_checker(raise_for={"https://live.bilibili.com/bad": RateLimitError("bilibili")})
+        checker = _make_checker(
+            raise_for={"https://live.bilibili.com/bad": RateLimitError("bilibili")}
+        )
         checker.extract_id_from_url.return_value = ""
         store = _make_store()
 
         items = [BatchItem("bilibili", "https://live.bilibili.com/bad")]
-        result = await process_batch_remove(store, "g1", items, {"bilibili": checker}, None)
+        result = await process_batch_remove(
+            store, "g1", items, {"bilibili": checker}, None
+        )
 
         assert result.items[0].status == "rate_limited"

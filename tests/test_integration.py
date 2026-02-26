@@ -1,26 +1,31 @@
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from core.batch import (
-    BatchItem, detect_mode, preprocess,
-    process_batch_add, process_batch_remove, MAX_BATCH_SIZE,
+    MAX_BATCH_SIZE,
+    BatchItem,
+    detect_mode,
+    preprocess,
+    process_batch_add,
+    process_batch_remove,
 )
 from core.models import ChannelInfo
 from core.store import Store
-
 
 _VALID_PLATFORMS = ("youtube", "twitch", "bilibili")
 
 
 def _detect_platform(raw: str) -> str | None:
     from urllib.parse import urlparse
+
     _HOST_MAP = {
-        "youtube.com": "youtube", "www.youtube.com": "youtube",
-        "twitch.tv": "twitch", "www.twitch.tv": "twitch",
+        "youtube.com": "youtube",
+        "www.youtube.com": "youtube",
+        "twitch.tv": "twitch",
+        "www.twitch.tv": "twitch",
         "live.bilibili.com": "bilibili",
     }
     url = raw if "://" in raw else f"https://{raw}"
@@ -80,7 +85,11 @@ class TestIntegrationCmdAdd:
         store = _make_store()
         checker = _make_checker("twitch", {"wpnebula", "streamer2"})
         checker.extract_id_from_url.side_effect = lambda url: (
-            "wpnebula" if "wpnebula" in url else "streamer2" if "streamer2" in url else ""
+            "wpnebula"
+            if "wpnebula" in url
+            else "streamer2"
+            if "streamer2" in url
+            else ""
         )
         checkers = {"twitch": checker}
 
@@ -112,15 +121,16 @@ class TestIntegrationCmdAdd:
         with pytest.raises(ValueError, match="mixed_mode"):
             detect_mode(
                 ["twitch", "a", "https://www.twitch.tv/b"],
-                _VALID_PLATFORMS, _detect_platform,
+                _VALID_PLATFORMS,
+                _detect_platform,
             )
 
     @pytest.mark.asyncio
     async def test_truncation_notice(self):
-        store = _make_store()
+        _ = _make_store()
         known = {str(i) for i in range(25)}
         checker = _make_checker("twitch", known)
-        checkers = {"twitch": checker}
+        _ = {"twitch": checker}
 
         raw_args = ["twitch"] + [str(i) for i in range(25)]
         _, items = detect_mode(raw_args, _VALID_PLATFORMS, _detect_platform)

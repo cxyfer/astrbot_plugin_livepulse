@@ -1,0 +1,6 @@
+[lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+"main.py" = ["E402"]

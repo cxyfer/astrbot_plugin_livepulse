@@ -21,7 +21,13 @@ if TYPE_CHECKING:
 
 
 class Notifier:
-    def __init__(self, context: Context, store: Store, i18n: I18nManager, include_thumbnail: bool = True) -> None:
+    def __init__(
+        self,
+        context: Context,
+        store: Store,
+        i18n: I18nManager,
+        include_thumbnail: bool = True,
+    ) -> None:
         self._ctx = context
         self._store = store
         self._i18n = i18n
@@ -36,7 +42,9 @@ class Notifier:
         *,
         force: bool = False,
     ) -> None:
-        if not force and not self._should_notify(origin, global_enable, Transition.LIVE_START):
+        if not force and not self._should_notify(
+            origin, global_enable, Transition.LIVE_START
+        ):
             return
         track = not force
         lang = self._store.get_language(origin)
@@ -46,7 +54,9 @@ class Notifier:
                 await self._send_chain(origin, chain, track_failure=track)
                 return
             except Exception:
-                logger.debug(f"Embed build failed for {origin}, falling back to plain text")
+                logger.debug(
+                    f"Embed build failed for {origin}, falling back to plain text"
+                )
         text = self._i18n.get(
             lang,
             "notify.live_start",
@@ -69,7 +79,9 @@ class Notifier:
         display_id: str = "",
         force: bool = False,
     ) -> None:
-        if not force and not self._should_notify(origin, global_enable, Transition.LIVE_END, global_end_enable):
+        if not force and not self._should_notify(
+            origin, global_enable, Transition.LIVE_END, global_end_enable
+        ):
             return
         track = not force
         lang = self._store.get_language(origin)
@@ -79,8 +91,12 @@ class Notifier:
                 await self._send_chain(origin, chain, track_failure=track)
                 return
             except Exception:
-                logger.debug(f"Embed build failed for {origin}, falling back to plain text")
-        text = self._i18n.get(lang, "notify.live_end", name=streamer_name, platform=platform)
+                logger.debug(
+                    f"Embed build failed for {origin}, falling back to plain text"
+                )
+        text = self._i18n.get(
+            lang, "notify.live_end", name=streamer_name, platform=platform
+        )
         await self._deliver(origin, text, thumbnail_url="", track_failure=track)
 
     def _should_notify(
@@ -95,28 +111,42 @@ class Notifier:
         gs = self._store.get_group(origin)
         if gs is None or not gs.notify_enabled:
             return False
-        if transition == Transition.LIVE_END and (not global_end_enable or not gs.end_notify_enabled):
+        if transition == Transition.LIVE_END and (
+            not global_end_enable or not gs.end_notify_enabled
+        ):
             return False
         return True
 
-    async def _deliver(self, origin: str, text: str, thumbnail_url: str, *, track_failure: bool = True) -> None:
+    async def _deliver(
+        self, origin: str, text: str, thumbnail_url: str, *, track_failure: bool = True
+    ) -> None:
         if self._include_thumbnail and thumbnail_url:
-            chain = MessageChain(chain=[Comp.Plain(text), Comp.Image.fromURL(thumbnail_url)])
+            chain = MessageChain(
+                chain=[Comp.Plain(text), Comp.Image.fromURL(thumbnail_url)]
+            )
             if await self._send_chain(origin, chain, track_failure=track_failure):
                 return
             logger.debug(f"Image send failed for {origin}, falling back to text-only")
 
-        await self._send_chain(origin, MessageChain(chain=[Comp.Plain(text)]), track_failure=track_failure)
+        await self._send_chain(
+            origin, MessageChain(chain=[Comp.Plain(text)]), track_failure=track_failure
+        )
 
-    async def _send_chain(self, origin: str, chain: MessageChain, *, track_failure: bool = True) -> bool:
+    async def _send_chain(
+        self, origin: str, chain: MessageChain, *, track_failure: bool = True
+    ) -> bool:
         try:
             result = await self._ctx.send_message(origin, chain)
             if result is False:
                 if track_failure:
                     count = self._store.increment_failure(origin)
-                    logger.warning(f"Notification delivery returned False for {origin} ({count} consecutive)")
+                    logger.warning(
+                        f"Notification delivery returned False for {origin} ({count} consecutive)"
+                    )
                 else:
-                    logger.warning(f"Notification delivery returned False for {origin} (forced/test)")
+                    logger.warning(
+                        f"Notification delivery returned False for {origin} (forced/test)"
+                    )
                 return False
             if track_failure:
                 self._store.reset_failure(origin)
@@ -124,9 +154,13 @@ class Notifier:
         except Exception as e:
             if track_failure:
                 count = self._store.increment_failure(origin)
-                logger.warning(f"Notification delivery failed for {origin} ({count} consecutive): {e}")
+                logger.warning(
+                    f"Notification delivery failed for {origin} ({count} consecutive): {e}"
+                )
             else:
-                logger.error(f"Notification delivery failed for {origin} (forced/test): {e}")
+                logger.error(
+                    f"Notification delivery failed for {origin} (forced/test): {e}"
+                )
             return False
 
     def _is_discord_origin(self, origin: str) -> bool:
@@ -172,18 +206,38 @@ class Notifier:
 
         return name
 
-    def _build_live_embed(self, lang: str, platform: str, snapshot: StatusSnapshot) -> MessageChain:
+    def _build_live_embed(
+        self, lang: str, platform: str, snapshot: StatusSnapshot
+    ) -> MessageChain:
         template = self._i18n.get(lang, "notify.embed.live_title")
         title = self._truncate_title(template, snapshot.streamer_name)
         formatted_name = self._format_streamer_name(platform, snapshot)
         footer = formatted_name
 
-        fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
+        fields = [
+            {
+                "name": self._i18n.get(lang, "notify.embed.field.platform"),
+                "value": platform,
+                "inline": True,
+            }
+        ]
         if snapshot.category and snapshot.category.strip():
-            fields.append({"name": self._i18n.get(lang, "notify.embed.field.category"), "value": snapshot.category, "inline": True})
+            fields.append(
+                {
+                    "name": self._i18n.get(lang, "notify.embed.field.category"),
+                    "value": snapshot.category,
+                    "inline": True,
+                }
+            )
         stream_url = snapshot.stream_url
         if stream_url and stream_url.strip():
-            fields.append({"name": self._i18n.get(lang, "notify.embed.field.link"), "value": stream_url, "inline": False})
+            fields.append(
+                {
+                    "name": self._i18n.get(lang, "notify.embed.field.link"),
+                    "value": stream_url,
+                    "inline": False,
+                }
+            )
 
         embed = self._make_embed(
             title=title,
@@ -197,7 +251,9 @@ class Notifier:
         )
         return MessageChain(chain=[embed])
 
-    def _build_end_embed(self, lang: str, platform: str, streamer_name: str, display_id: str = "") -> MessageChain:
+    def _build_end_embed(
+        self, lang: str, platform: str, streamer_name: str, display_id: str = ""
+    ) -> MessageChain:
         template = self._i18n.get(lang, "notify.embed.end_title")
         title = self._truncate_title(template, streamer_name)
         # Reuse formatting logic by creating a snapshot with available data
@@ -210,7 +266,13 @@ class Notifier:
         )
         footer = self._format_streamer_name(platform, snapshot)
 
-        fields = [{"name": self._i18n.get(lang, "notify.embed.field.platform"), "value": platform, "inline": True}]
+        fields = [
+            {
+                "name": self._i18n.get(lang, "notify.embed.field.platform"),
+                "value": platform,
+                "inline": True,
+            }
+        ]
         embed = self._make_embed(
             title=title,
             description="",

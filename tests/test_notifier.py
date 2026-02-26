@@ -12,6 +12,7 @@ class TestFormatStreamerName:
     @pytest.fixture
     def notifier(self):
         """Create a Notifier instance with mocked dependencies."""
+
         class MockContext:
             pass
 
@@ -154,6 +155,7 @@ class TestBuildEndEmbedFooter:
 
         # Patch the imports in notifier module
         import core.notifier as notifier_module
+
         monkeypatch.setattr(notifier_module, "DiscordEmbed", MockDiscordEmbed)
         monkeypatch.setattr(notifier_module, "MessageChain", MockMessageChain)
 
@@ -180,6 +182,8 @@ class TestBuildEndEmbedFooter:
 
     def test_twitch_end_footer_different_name(self, notifier: Notifier):
         """Twitch end notification with different names should show (@login)."""
-        chain = notifier._build_end_embed("en", "twitch", "日本語配信者", "japanese_streamer")
+        chain = notifier._build_end_embed(
+            "en", "twitch", "日本語配信者", "japanese_streamer"
+        )
         embed = chain.chain[0]
         assert embed.footer == "日本語配信者 (@japanese_streamer)"

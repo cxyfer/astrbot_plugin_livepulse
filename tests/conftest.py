@@ -4,11 +4,13 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+
 # Mock DiscordEmbed first (before any imports)
 class MockDiscordEmbed:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
 
 # Create mock discord components module
 _mock_discord_components = MagicMock()
@@ -18,7 +20,9 @@ sys.modules["astrbot.core"] = MagicMock()
 sys.modules["astrbot.core.platform"] = MagicMock()
 sys.modules["astrbot.core.platform.sources"] = MagicMock()
 sys.modules["astrbot.core.platform.sources.discord"] = MagicMock()
-sys.modules["astrbot.core.platform.sources.discord.components"] = _mock_discord_components
+sys.modules["astrbot.core.platform.sources.discord.components"] = (
+    _mock_discord_components
+)
 
 # Mock astrbot before any plugin imports
 _astrbot_mock = MagicMock()

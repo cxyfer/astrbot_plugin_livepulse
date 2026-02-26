@@ -5,15 +5,19 @@ from urllib.parse import unquote
 
 from astrbot.api import logger
 
-from .models import GroupState, MonitorEntry, ChannelInfo
+from .models import ChannelInfo, GroupState, MonitorEntry
 from .persistence import PersistenceManager
 
 
 class Store:
-    def __init__(self, persistence: PersistenceManager, default_language: str = "en") -> None:
+    def __init__(
+        self, persistence: PersistenceManager, default_language: str = "en"
+    ) -> None:
         self.lock = asyncio.Lock()
         self.groups: dict[str, GroupState] = {}
-        self.reverse_index: dict[str, dict[str, set[str]]] = {}  # {platform: {channel_id: {origins}}}
+        self.reverse_index: dict[
+            str, dict[str, set[str]]
+        ] = {}  # {platform: {channel_id: {origins}}}
         self._persistence = persistence
         self._default_language = default_language
 
@@ -27,7 +31,9 @@ class Store:
             self.groups[origin] = gs
             for platform, entries in gs.monitors.items():
                 for cid in entries:
-                    self.reverse_index.setdefault(platform, {}).setdefault(cid, set()).add(origin)
+                    self.reverse_index.setdefault(platform, {}).setdefault(
+                        cid, set()
+                    ).add(origin)
 
     async def persist(self) -> None:
         state = {"groups": {origin: gs.to_dict() for origin, gs in self.groups.items()}}
@@ -56,8 +62,12 @@ class Store:
     # --- mutations (must be called under lock) ---
 
     def add_monitor(
-        self, origin: str, platform: str, info: ChannelInfo,
-        max_per_group: int, max_global: int,
+        self,
+        origin: str,
+        platform: str,
+        info: ChannelInfo,
+        max_per_group: int,
+        max_global: int,
     ) -> str | None:
         """Returns error key or None on success."""
         gs = self._ensure_group(origin)
@@ -74,7 +84,9 @@ class Store:
             channel_name=info.channel_name,
             display_id=info.display_id,
         )
-        self.reverse_index.setdefault(platform, {}).setdefault(info.channel_id, set()).add(origin)
+        self.reverse_index.setdefault(platform, {}).setdefault(
+            info.channel_id, set()
+        ).add(origin)
         return None
 
     def remove_monitor(self, origin: str, platform: str, channel_id: str) -> bool:
@@ -97,15 +109,23 @@ class Store:
         return True
 
     async def add_monitors_batch(
-        self, origin: str, items: list[tuple[str, ChannelInfo]],
-        max_per_group: int, max_global: int,
+        self,
+        origin: str,
+        items: list[tuple[str, ChannelInfo]],
+        max_per_group: int,
+        max_global: int,
     ) -> list[str | None]:
         async with self.lock:
-            results = [self.add_monitor(origin, p, info, max_per_group, max_global) for p, info in items]
+            results = [
+                self.add_monitor(origin, p, info, max_per_group, max_global)
+                for p, info in items
+            ]
             await self.persist()
             return results
 
-    async def remove_monitors_batch(self, origin: str, items: list[tuple[str, str]]) -> list[bool]:
+    async def remove_monitors_batch(
+        self, origin: str, items: list[tuple[str, str]]
+    ) -> list[bool]:
         async with self.lock:
             results = [self.remove_monitor(origin, p, cid) for p, cid in items]
             await self.persist()
@@ -123,7 +143,9 @@ class Store:
     def set_end_notify(self, origin: str, enabled: bool) -> None:
         self._ensure_group(origin).end_notify_enabled = enabled
 
-    def update_status(self, origin: str, platform: str, channel_id: str, status: str, stream_id: str) -> None:
+    def update_status(
+        self, origin: str, platform: str, channel_id: str, status: str, stream_id: str
+    ) -> None:
         gs = self.groups.get(origin)
         if gs is None:
             return
@@ -141,7 +163,9 @@ class Store:
         gs.send_failure_count += 1
         if gs.send_failure_count >= 10:
             gs.notify_enabled = False
-            logger.warning(f"Auto-disabled notifications for {origin} after 10 consecutive failures")
+            logger.warning(
+                f"Auto-disabled notifications for {origin} after 10 consecutive failures"
+            )
         return gs.send_failure_count
 
     def reset_failure(self, origin: str) -> None:
@@ -163,7 +187,9 @@ class Store:
     def get_group(self, origin: str) -> GroupState | None:
         return self.groups.get(origin)
 
-    def lookup_by_display_id(self, origin: str, platform: str, display_id: str) -> str | None:
+    def lookup_by_display_id(
+        self, origin: str, platform: str, display_id: str
+    ) -> str | None:
         gs = self.groups.get(origin)
         if gs is None:
             return None

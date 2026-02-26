@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import random
 from unittest.mock import AsyncMock, MagicMock
 
@@ -125,12 +124,15 @@ class TestPBT:
 
     def test_mode_exclusivity_mixed_input(self):
         """mixed input -> ValueError, zero mutations possible"""
-        from core.batch import detect_mode
         from urllib.parse import urlparse
 
+        from core.batch import detect_mode
+
         _HOST_MAP = {
-            "twitch.tv": "twitch", "www.twitch.tv": "twitch",
-            "youtube.com": "youtube", "www.youtube.com": "youtube",
+            "twitch.tv": "twitch",
+            "www.twitch.tv": "twitch",
+            "youtube.com": "youtube",
+            "www.youtube.com": "youtube",
         }
 
         def _detect(raw):

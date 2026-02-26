@@ -3,10 +3,9 @@ from __future__ import annotations
 import re
 
 from aiohttp import ClientSession, ClientTimeout
-
 from astrbot.api import logger
 
-from core.models import StatusSnapshot, ChannelInfo
+from core.models import ChannelInfo, StatusSnapshot
 from platforms.base import BasePlatformChecker, RateLimitError
 
 _API_URL = "https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids"
@@ -21,7 +20,9 @@ class BilibiliChecker(BasePlatformChecker):
     def __init__(self, timeout: int = 10) -> None:
         self._timeout = ClientTimeout(total=timeout)
 
-    async def check_status(self, channel_ids: list[str], session: ClientSession) -> dict[str, StatusSnapshot]:
+    async def check_status(
+        self, channel_ids: list[str], session: ClientSession
+    ) -> dict[str, StatusSnapshot]:
         results: dict[str, StatusSnapshot] = {}
         for i in range(0, len(channel_ids), _CHUNK_SIZE):
             chunk = channel_ids[i : i + _CHUNK_SIZE]
@@ -35,7 +36,9 @@ class BilibiliChecker(BasePlatformChecker):
             if not valid_uids:
                 continue
             try:
-                async with session.post(_API_URL, json={"uids": valid_uids}, timeout=self._timeout) as resp:
+                async with session.post(
+                    _API_URL, json={"uids": valid_uids}, timeout=self._timeout
+                ) as resp:
                     if resp.status == 429:
                         raise RateLimitError("bilibili")
                     resp.raise_for_status()
@@ -45,7 +48,9 @@ class BilibiliChecker(BasePlatformChecker):
             except Exception as e:
                 logger.warning(f"Bilibili batch query failed: {e}")
                 for uid in chunk:
-                    results[uid] = StatusSnapshot(is_live=False, streamer_name=uid, success=False)
+                    results[uid] = StatusSnapshot(
+                        is_live=False, streamer_name=uid, success=False
+                    )
                 continue
             info_map = data.get("data", {})
             for uid in chunk:
@@ -62,14 +67,20 @@ class BilibiliChecker(BasePlatformChecker):
                     category=info.get("area_v2_name", ""),
                     thumbnail_url=info.get("cover_from_user", ""),
                     streamer_name=info.get("uname", uid),
-                    stream_url=f"https://live.bilibili.com/{room_id}" if room_id else "",
+                    stream_url=f"https://live.bilibili.com/{room_id}"
+                    if room_id
+                    else "",
                     display_id=uid,
                 )
         return results
 
-    async def _resolve_room_id(self, room_id: str, session: ClientSession) -> str | None:
+    async def _resolve_room_id(
+        self, room_id: str, session: ClientSession
+    ) -> str | None:
         try:
-            async with session.get(_ROOM_INFO_URL, params={"room_id": room_id}, timeout=self._timeout) as resp:
+            async with session.get(
+                _ROOM_INFO_URL, params={"room_id": room_id}, timeout=self._timeout
+            ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
         except Exception as e:
@@ -78,14 +89,18 @@ class BilibiliChecker(BasePlatformChecker):
         uid = data.get("data", {}).get("uid")
         return str(uid) if uid is not None else None
 
-    async def _validate_uid(self, uid: str, session: ClientSession) -> ChannelInfo | None:
+    async def _validate_uid(
+        self, uid: str, session: ClientSession
+    ) -> ChannelInfo | None:
         try:
             uid_int = int(uid)
         except ValueError:
             return None
         uid_str = str(uid_int)
         try:
-            async with session.post(_API_URL, json={"uids": [uid_int]}, timeout=self._timeout) as resp:
+            async with session.post(
+                _API_URL, json={"uids": [uid_int]}, timeout=self._timeout
+            ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
         except Exception as e:
@@ -100,7 +115,9 @@ class BilibiliChecker(BasePlatformChecker):
             platform="bilibili",
         )
 
-    async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+    async def validate_channel(
+        self, channel_id: str, session: ClientSession
+    ) -> ChannelInfo | None:
         url_match = _BILI_URL_RE.search(channel_id)
         if url_match:
             room_id = url_match.group(1)

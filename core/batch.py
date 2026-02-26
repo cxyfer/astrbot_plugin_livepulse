@@ -31,7 +31,9 @@ class BatchResult:
     truncated: int = 0
 
 
-def preprocess(items: list[BatchItem], max_size: int = MAX_BATCH_SIZE) -> tuple[list[BatchItem], int]:
+def preprocess(
+    items: list[BatchItem], max_size: int = MAX_BATCH_SIZE
+) -> tuple[list[BatchItem], int]:
     seen: set[str] = set()
     unique: list[BatchItem] = []
     for item in items:
@@ -78,9 +80,13 @@ def detect_mode(
 
 
 async def process_batch_add(
-    store, origin: str, items: list[BatchItem],
-    checkers: dict, session,
-    max_per_group: int, max_global: int,
+    store,
+    origin: str,
+    items: list[BatchItem],
+    checkers: dict,
+    session,
+    max_per_group: int,
+    max_global: int,
 ) -> BatchResult:
     sem = asyncio.Semaphore(_SEM_LIMIT)
 
@@ -90,11 +96,17 @@ async def process_batch_add(
             return item, None, ValueError("no_checker")
         async with sem:
             try:
-                return item, await checker.validate_channel(item.identifier, session), None
+                return (
+                    item,
+                    await checker.validate_channel(item.identifier, session),
+                    None,
+                )
             except Exception as e:
                 return item, None, e
 
-    raw = await asyncio.gather(*(validate_one(it) for it in items), return_exceptions=True)
+    raw = await asyncio.gather(
+        *(validate_one(it) for it in items), return_exceptions=True
+    )
 
     success_pairs: list[tuple[str, ChannelInfo]] = []
     success_indices: list[int] = []
@@ -104,21 +116,43 @@ async def process_batch_add(
         ident = items[i].identifier
         plat = items[i].platform
         if isinstance(r, BaseException):
-            results.append(BatchResultItem(ident, "internal_error", platform=plat, error_key="cmd.batch.item_fail"))
+            results.append(
+                BatchResultItem(
+                    ident,
+                    "internal_error",
+                    platform=plat,
+                    error_key="cmd.batch.item_fail",
+                )
+            )
             continue
         _, info, exc = r
         if exc is not None:
-            status = "rate_limited" if isinstance(exc, RateLimitError) else "internal_error"
-            results.append(BatchResultItem(ident, status, platform=plat, error_key="cmd.batch.item_fail"))
+            status = (
+                "rate_limited" if isinstance(exc, RateLimitError) else "internal_error"
+            )
+            results.append(
+                BatchResultItem(
+                    ident, status, platform=plat, error_key="cmd.batch.item_fail"
+                )
+            )
         elif info is None:
-            results.append(BatchResultItem(ident, "not_found", platform=plat, error_key="cmd.batch.item_not_found"))
+            results.append(
+                BatchResultItem(
+                    ident,
+                    "not_found",
+                    platform=plat,
+                    error_key="cmd.batch.item_not_found",
+                )
+            )
         else:
             success_pairs.append((items[i].platform, info))
             success_indices.append(i)
             results.append(BatchResultItem(ident, "pending", platform=plat, info=info))
 
     if success_pairs:
-        store_results = await store.add_monitors_batch(origin, success_pairs, max_per_group, max_global)
+        store_results = await store.add_monitors_batch(
+            origin, success_pairs, max_per_group, max_global
+        )
         for j, err in enumerate(store_results):
             idx = success_indices[j]
             if err is None:
@@ -137,17 +171,24 @@ async def process_batch_add(
 
 
 async def process_batch_remove(
-    store, origin: str, items: list[BatchItem],
-    checkers: dict, session,
+    store,
+    origin: str,
+    items: list[BatchItem],
+    checkers: dict,
+    session,
 ) -> BatchResult:
     sem = asyncio.Semaphore(_SEM_LIMIT)
     results: list[BatchResultItem] = [None] * len(items)  # type: ignore[list-item]
-    remove_pairs: list[tuple[int, str, str]] = []  # (original_index, platform, channel_id)
+    remove_pairs: list[
+        tuple[int, str, str]
+    ] = []  # (original_index, platform, channel_id)
     pending_network: list[int] = []
 
     for i, item in enumerate(items):
         checker = checkers.get(item.platform)
-        is_url = "://" in item.identifier or ("." in item.identifier and "/" in item.identifier)
+        is_url = "://" in item.identifier or (
+            "." in item.identifier and "/" in item.identifier
+        )
 
         if is_url:
             extracted = checker.extract_id_from_url(item.identifier) if checker else ""
@@ -157,12 +198,18 @@ async def process_batch_remove(
             elif checker:
                 pending_network.append(i)
             else:
-                results[i] = BatchResultItem(item.identifier, "not_found", platform=item.platform, error_key="cmd.batch.item_not_found")
+                results[i] = BatchResultItem(
+                    item.identifier,
+                    "not_found",
+                    platform=item.platform,
+                    error_key="cmd.batch.item_not_found",
+                )
         else:
             cid = _resolve_local(store, origin, item.platform, item.identifier)
             remove_pairs.append((i, item.platform, cid))
 
     if pending_network:
+
         async def resolve(idx: int):
             item = items[idx]
             checker = checkers[item.platform]
@@ -176,12 +223,26 @@ async def process_batch_remove(
         resolved = await asyncio.gather(*(resolve(idx) for idx in pending_network))
         for idx, cid, exc in resolved:
             if exc is not None:
-                status = "rate_limited" if isinstance(exc, RateLimitError) else "internal_error"
-                results[idx] = BatchResultItem(items[idx].identifier, status, platform=items[idx].platform, error_key="cmd.batch.item_fail")
+                status = (
+                    "rate_limited"
+                    if isinstance(exc, RateLimitError)
+                    else "internal_error"
+                )
+                results[idx] = BatchResultItem(
+                    items[idx].identifier,
+                    status,
+                    platform=items[idx].platform,
+                    error_key="cmd.batch.item_fail",
+                )
             elif cid:
                 remove_pairs.append((idx, items[idx].platform, cid))
             else:
-                results[idx] = BatchResultItem(items[idx].identifier, "not_found", platform=items[idx].platform, error_key="cmd.batch.item_not_found")
+                results[idx] = BatchResultItem(
+                    items[idx].identifier,
+                    "not_found",
+                    platform=items[idx].platform,
+                    error_key="cmd.batch.item_not_found",
+                )
 
     if remove_pairs:
         ordered = sorted(remove_pairs, key=lambda x: x[0])
@@ -189,9 +250,18 @@ async def process_batch_remove(
         store_results = await store.remove_monitors_batch(origin, store_items)
         for (orig_idx, _, _), removed in zip(ordered, store_results):
             if removed:
-                results[orig_idx] = BatchResultItem(items[orig_idx].identifier, "removed", platform=items[orig_idx].platform)
+                results[orig_idx] = BatchResultItem(
+                    items[orig_idx].identifier,
+                    "removed",
+                    platform=items[orig_idx].platform,
+                )
             else:
-                results[orig_idx] = BatchResultItem(items[orig_idx].identifier, "not_found", platform=items[orig_idx].platform, error_key="cmd.batch.item_not_found")
+                results[orig_idx] = BatchResultItem(
+                    items[orig_idx].identifier,
+                    "not_found",
+                    platform=items[orig_idx].platform,
+                    error_key="cmd.batch.item_not_found",
+                )
 
     return BatchResult(items=results)
 

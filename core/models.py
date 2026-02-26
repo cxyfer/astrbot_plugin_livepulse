@@ -21,11 +21,21 @@ class ChannelInfo:
             self.display_id = self.channel_id
 
     def to_dict(self) -> dict:
-        return {"channel_id": self.channel_id, "channel_name": self.channel_name, "platform": self.platform, "display_id": self.display_id}
+        return {
+            "channel_id": self.channel_id,
+            "channel_name": self.channel_name,
+            "platform": self.platform,
+            "display_id": self.display_id,
+        }
 
     @classmethod
     def from_dict(cls, d: dict) -> ChannelInfo:
-        return cls(channel_id=d["channel_id"], channel_name=d["channel_name"], platform=d["platform"], display_id=d.get("display_id", d["channel_id"]))
+        return cls(
+            channel_id=d["channel_id"],
+            channel_name=d["channel_name"],
+            platform=d["platform"],
+            display_id=d.get("display_id", d["channel_id"]),
+        )
 
 
 STATUS_EMOJI: dict[str, str] = {"live": "🟢", "offline": "🔴", "unknown": "❓"}
@@ -91,7 +101,9 @@ class GroupState:
     def to_dict(self) -> dict:
         monitors_dict: dict[str, dict[str, dict]] = {}
         for platform, entries in self.monitors.items():
-            monitors_dict[platform] = {cid: entry.to_dict() for cid, entry in entries.items()}
+            monitors_dict[platform] = {
+                cid: entry.to_dict() for cid, entry in entries.items()
+            }
         return {
             "language": self.language,
             "notify_enabled": self.notify_enabled,
@@ -104,7 +116,9 @@ class GroupState:
     def from_dict(cls, d: dict) -> GroupState:
         monitors: dict[str, dict[str, MonitorEntry]] = {}
         for platform, entries in d.get("monitors", {}).items():
-            monitors[platform] = {cid: MonitorEntry.from_dict(entry) for cid, entry in entries.items()}
+            monitors[platform] = {
+                cid: MonitorEntry.from_dict(entry) for cid, entry in entries.items()
+            }
         return cls(
             language=d.get("language", "en"),
             notify_enabled=d.get("notify_enabled", True),

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from aiohttp import ClientSession
-
 from astrbot.api import logger
 
 from core.models import StatusSnapshot, Transition
@@ -80,9 +79,13 @@ class PlatformPoller:
                 return
             except Exception as e:
                 self.healthy = False
-                delay = min(_BACKOFF_BASE * (_BACKOFF_MULT ** restart_count), _BACKOFF_MAX)
+                delay = min(
+                    _BACKOFF_BASE * (_BACKOFF_MULT**restart_count), _BACKOFF_MAX
+                )
                 delay = _jittered(delay)
-                logger.error(f"Poller {self._platform} crashed: {e}, restarting in {delay:.0f}s")
+                logger.error(
+                    f"Poller {self._platform} crashed: {e}, restarting in {delay:.0f}s"
+                )
                 restart_count += 1
                 await asyncio.sleep(delay)
             else:
@@ -97,13 +100,19 @@ class PlatformPoller:
                 continue
 
             now = time.time()
-            eligible = [cid for cid in snapshot if self._channel_backoff_until.get(cid, 0) <= now]
+            eligible = [
+                cid
+                for cid in snapshot
+                if self._channel_backoff_until.get(cid, 0) <= now
+            ]
 
             if eligible:
                 try:
                     statuses = await self._checker.check_status(eligible, self._session)
                     if self._platform_backoff > 0:
-                        self._platform_backoff = max(self._platform_backoff / _BACKOFF_MULT, 0)
+                        self._platform_backoff = max(
+                            self._platform_backoff / _BACKOFF_MULT, 0
+                        )
                         if self._platform_backoff < _BACKOFF_BASE:
                             self._platform_backoff = 0.0
                 except RateLimitError:
@@ -148,35 +157,49 @@ class PlatformPoller:
                     if status.display_id:
                         entry.display_id = status.display_id
 
-                    transition = self._compute_transition(entry, new_status, status.stream_id)
-                    self._store.update_status(origin, self._platform, channel_id, new_status, status.stream_id)
+                    transition = self._compute_transition(
+                        entry, new_status, status.stream_id
+                    )
+                    self._store.update_status(
+                        origin, self._platform, channel_id, new_status, status.stream_id
+                    )
 
                     if transition is not None:
-                        pending.append(_PendingNotification(
-                            origin=origin,
-                            transition=transition,
-                            platform=self._platform,
-                            snapshot=status,
-                            streamer_name=status.streamer_name,
-                            display_id=entry.display_id,
-                        ))
+                        pending.append(
+                            _PendingNotification(
+                                origin=origin,
+                                transition=transition,
+                                platform=self._platform,
+                                snapshot=status,
+                                streamer_name=status.streamer_name,
+                                display_id=entry.display_id,
+                            )
+                        )
 
             await self._store.persist()
 
         for note in pending:
             if note.transition == Transition.LIVE_START:
                 await self._notifier.send_live_notification(
-                    note.origin, note.platform, note.snapshot, self._global_notify,
+                    note.origin,
+                    note.platform,
+                    note.snapshot,
+                    self._global_notify,
                 )
             elif note.transition == Transition.LIVE_END:
                 await self._notifier.send_end_notification(
-                    note.origin, note.platform, note.streamer_name,
-                    self._global_notify, self._global_end_notify,
+                    note.origin,
+                    note.platform,
+                    note.streamer_name,
+                    self._global_notify,
+                    self._global_end_notify,
                     display_id=note.display_id,
                 )
 
     @staticmethod
-    def _compute_transition(entry, new_status: str, new_stream_id: str) -> Transition | None:
+    def _compute_transition(
+        entry, new_status: str, new_stream_id: str
+    ) -> Transition | None:
         if not entry.initialized:
             return None
         if entry.last_status != "live" and new_status == "live":
@@ -189,8 +212,16 @@ class PlatformPoller:
         if self._platform_backoff == 0:
             self._platform_backoff = _BACKOFF_BASE
         else:
-            self._platform_backoff = min(self._platform_backoff * _BACKOFF_MULT, _BACKOFF_MAX)
-        logger.warning(f"Rate limited on {self._platform}, backoff {self._platform_backoff:.0f}s")
+            self._platform_backoff = min(
+                self._platform_backoff * _BACKOFF_MULT, _BACKOFF_MAX
+            )
+        logger.warning(
+            f"Rate limited on {self._platform}, backoff {self._platform_backoff:.0f}s"
+        )
 
     def _effective_interval(self) -> float:
-        return max(self._interval, _jittered(self._platform_backoff)) if self._platform_backoff else self._interval
+        return (
+            max(self._interval, _jittered(self._platform_backoff))
+            if self._platform_backoff
+            else self._interval
+        )

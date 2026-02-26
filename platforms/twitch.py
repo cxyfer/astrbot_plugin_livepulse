@@ -5,10 +5,9 @@ import re
 import time
 
 from aiohttp import ClientSession, ClientTimeout
-
 from astrbot.api import logger
 
-from core.models import StatusSnapshot, ChannelInfo
+from core.models import ChannelInfo, StatusSnapshot
 from platforms.base import BasePlatformChecker, RateLimitError
 
 _TOKEN_URL = "https://id.twitch.tv/oauth2/token"
@@ -45,7 +44,9 @@ class TwitchChecker(BasePlatformChecker):
             "client_secret": self._client_secret,
             "grant_type": "client_credentials",
         }
-        async with session.post(_TOKEN_URL, data=payload, timeout=self._timeout) as resp:
+        async with session.post(
+            _TOKEN_URL, data=payload, timeout=self._timeout
+        ) as resp:
             resp.raise_for_status()
             data = await resp.json()
         self._access_token = data["access_token"]
@@ -53,11 +54,16 @@ class TwitchChecker(BasePlatformChecker):
         return self._access_token
 
     def _headers(self) -> dict[str, str]:
-        return {"Client-ID": self._client_id, "Authorization": f"Bearer {self._access_token}"}
+        return {
+            "Client-ID": self._client_id,
+            "Authorization": f"Bearer {self._access_token}",
+        }
 
-    async def check_status(self, channel_ids: list[str], session: ClientSession) -> dict[str, StatusSnapshot]:
+    async def check_status(
+        self, channel_ids: list[str], session: ClientSession
+    ) -> dict[str, StatusSnapshot]:
         results: dict[str, StatusSnapshot] = {}
-        token = await self._ensure_token(session)
+        await self._ensure_token(session)
 
         for i in range(0, len(channel_ids), _BATCH_SIZE):
             chunk = channel_ids[i : i + _BATCH_SIZE]
@@ -69,7 +75,9 @@ class TwitchChecker(BasePlatformChecker):
             except Exception as e:
                 logger.warning(f"Twitch streams query failed: {e}")
                 for uid in chunk:
-                    results[uid] = StatusSnapshot(is_live=False, streamer_name=uid, success=False)
+                    results[uid] = StatusSnapshot(
+                        is_live=False, streamer_name=uid, success=False
+                    )
                 continue
 
             live_map: dict[str, dict] = {}
@@ -82,7 +90,11 @@ class TwitchChecker(BasePlatformChecker):
                 if stream is None:
                     results[uid] = StatusSnapshot(is_live=False, streamer_name=uid)
                     continue
-                thumb = stream.get("thumbnail_url", "").replace("{width}", "640").replace("{height}", "360")
+                thumb = (
+                    stream.get("thumbnail_url", "")
+                    .replace("{width}", "640")
+                    .replace("{height}", "360")
+                )
                 user_login = (stream.get("user_login") or uid).lower()
                 results[uid] = StatusSnapshot(
                     is_live=True,
@@ -97,13 +109,19 @@ class TwitchChecker(BasePlatformChecker):
                 )
         return results
 
-    async def _get_with_retry(self, session: ClientSession, url: str, params: list[tuple[str, str]]) -> dict:
-        async with session.get(url, params=params, headers=self._headers(), timeout=self._timeout) as resp:
+    async def _get_with_retry(
+        self, session: ClientSession, url: str, params: list[tuple[str, str]]
+    ) -> dict:
+        async with session.get(
+            url, params=params, headers=self._headers(), timeout=self._timeout
+        ) as resp:
             if resp.status == 429:
                 raise RateLimitError("twitch")
             if resp.status == 401:
                 await self._refresh_token(session)
-                async with session.get(url, params=params, headers=self._headers(), timeout=self._timeout) as retry:
+                async with session.get(
+                    url, params=params, headers=self._headers(), timeout=self._timeout
+                ) as retry:
                     if retry.status == 429:
                         raise RateLimitError("twitch")
                     retry.raise_for_status()
@@ -119,13 +137,17 @@ class TwitchChecker(BasePlatformChecker):
                 return extracted
         return ""
 
-    async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+    async def validate_channel(
+        self, channel_id: str, session: ClientSession
+    ) -> ChannelInfo | None:
         extracted = self.extract_id_from_url(channel_id)
         if extracted:
             channel_id = extracted
         await self._ensure_token(session)
         try:
-            data = await self._get_with_retry(session, _USERS_URL, [("login", channel_id)])
+            data = await self._get_with_retry(
+                session, _USERS_URL, [("login", channel_id)]
+            )
         except RateLimitError:
             raise
         except Exception as e:

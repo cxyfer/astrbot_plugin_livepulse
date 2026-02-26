@@ -15,6 +15,7 @@ def _migrate(from_version: int):
     def decorator(fn):
         _MIGRATIONS[from_version] = fn
         return fn
+
     return decorator
 
 
@@ -48,7 +49,9 @@ class PersistenceManager:
     def _apply_migrations(self, data: dict) -> dict:
         ver = data.get("schema_version", 1)
         if ver > CURRENT_SCHEMA_VERSION:
-            logger.error(f"Unknown schema version {ver} (current: {CURRENT_SCHEMA_VERSION}), starting fresh")
+            logger.error(
+                f"Unknown schema version {ver} (current: {CURRENT_SCHEMA_VERSION}), starting fresh"
+            )
             return self._empty_state()
         while ver < CURRENT_SCHEMA_VERSION:
             fn = _MIGRATIONS.get(ver)

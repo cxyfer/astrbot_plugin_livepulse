@@ -3,10 +3,9 @@ from __future__ import annotations
 import re
 
 from aiohttp import ClientSession, ClientTimeout
-
 from astrbot.api import logger
 
-from core.models import StatusSnapshot, ChannelInfo
+from core.models import ChannelInfo, StatusSnapshot
 from platforms.base import BasePlatformChecker, RateLimitError
 
 _USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
@@ -31,7 +30,9 @@ class YouTubeChecker(BasePlatformChecker):
     def __init__(self, timeout: int = 20) -> None:
         self._timeout = ClientTimeout(total=timeout)
 
-    async def check_status(self, channel_ids: list[str], session: ClientSession) -> dict[str, StatusSnapshot]:
+    async def check_status(
+        self, channel_ids: list[str], session: ClientSession
+    ) -> dict[str, StatusSnapshot]:
         results: dict[str, StatusSnapshot] = {}
         for cid in channel_ids:
             try:
@@ -40,17 +41,25 @@ class YouTubeChecker(BasePlatformChecker):
                 raise
             except Exception as e:
                 logger.warning(f"YouTube check failed for {cid}: {e}")
-                results[cid] = StatusSnapshot(is_live=False, streamer_name=cid, success=False)
+                results[cid] = StatusSnapshot(
+                    is_live=False, streamer_name=cid, success=False
+                )
         return results
 
-    async def _check_single(self, channel_id: str, session: ClientSession) -> StatusSnapshot:
+    async def _check_single(
+        self, channel_id: str, session: ClientSession
+    ) -> StatusSnapshot:
         url = _STREAMS_URL.format(channel_id=channel_id)
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
-        async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
+        async with session.get(
+            url, headers=headers, timeout=self._timeout, allow_redirects=True
+        ) as resp:
             if resp.status == 429:
                 raise RateLimitError("youtube")
             if resp.status != 200:
-                return StatusSnapshot(is_live=False, streamer_name=channel_id, success=False)
+                return StatusSnapshot(
+                    is_live=False, streamer_name=channel_id, success=False
+                )
             html = await resp.text()
 
         if _is_blocked(html):
@@ -105,7 +114,9 @@ class YouTubeChecker(BasePlatformChecker):
             break
 
         if not video_id:
-            return StatusSnapshot(is_live=False, streamer_name=name, display_id=display_id)
+            return StatusSnapshot(
+                is_live=False, streamer_name=name, display_id=display_id
+            )
 
         stream_url = f"https://www.youtube.com/watch?v={video_id}"
 
@@ -123,7 +134,9 @@ class YouTubeChecker(BasePlatformChecker):
         m = _YT_URL_RE.search(raw)
         return (m.group(1) or m.group(2)) if m else ""
 
-    async def validate_channel(self, channel_id: str, session: ClientSession) -> ChannelInfo | None:
+    async def validate_channel(
+        self, channel_id: str, session: ClientSession
+    ) -> ChannelInfo | None:
         extracted = self.extract_id_from_url(channel_id)
         if extracted:
             channel_id = extracted
@@ -132,19 +145,33 @@ class YouTubeChecker(BasePlatformChecker):
             if resolved is None:
                 return None
             cid, name, display_id = resolved
-            return ChannelInfo(channel_id=cid, channel_name=name, platform="youtube", display_id=display_id)
+            return ChannelInfo(
+                channel_id=cid,
+                channel_name=name,
+                platform="youtube",
+                display_id=display_id,
+            )
         else:
             result = await self._get_channel_name(channel_id, session)
             if result is None:
                 return None
             name, display_id = result
-            return ChannelInfo(channel_id=channel_id, channel_name=name, platform="youtube", display_id=display_id)
+            return ChannelInfo(
+                channel_id=channel_id,
+                channel_name=name,
+                platform="youtube",
+                display_id=display_id,
+            )
 
-    async def _resolve_handle(self, handle: str, session: ClientSession) -> tuple[str, str, str] | None:
+    async def _resolve_handle(
+        self, handle: str, session: ClientSession
+    ) -> tuple[str, str, str] | None:
         url = _HANDLE_URL.format(handle=handle)
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
-            async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
+            async with session.get(
+                url, headers=headers, timeout=self._timeout, allow_redirects=True
+            ) as resp:
                 if resp.status != 200:
                     return None
                 html = await resp.text()
@@ -170,11 +197,15 @@ class YouTubeChecker(BasePlatformChecker):
 
         return channel_id, name, display_id
 
-    async def _get_channel_name(self, channel_id: str, session: ClientSession) -> tuple[str, str] | None:
+    async def _get_channel_name(
+        self, channel_id: str, session: ClientSession
+    ) -> tuple[str, str] | None:
         url = f"https://www.youtube.com/channel/{channel_id}"
         headers = {"User-Agent": _USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
         try:
-            async with session.get(url, headers=headers, timeout=self._timeout, allow_redirects=True) as resp:
+            async with session.get(
+                url, headers=headers, timeout=self._timeout, allow_redirects=True
+            ) as resp:
                 if resp.status != 200:
                     return None
                 html = await resp.text()
