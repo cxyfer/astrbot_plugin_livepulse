@@ -6,7 +6,7 @@
 
 *AstrBot plugin for monitoring live streams on YouTube, Twitch, and Bilibili. Sends notifications when streamers go live or end streams.*
 
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![AstrBot](https://img.shields.io/badge/AstrBot-3.4%2B-orange.svg?style=flat-square)](https://github.com/Soulter/AstrBot)
 [![GitHub](https://img.shields.io/badge/Author-Xyfer-ff69b4?style=flat-square)](https://github.com/cxyfer)
@@ -144,4 +144,4 @@ astrbot_plugin_livepulse/
 
 ## License
 
-MIT
+[GNU Affero General Public License v3.0](LICENSE)
