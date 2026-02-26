@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.1.4 (2026-02-27)
+
+### ♻️ Refactoring
+
+- **Storage migration**: replace hardcoded `~/.astrbot/livepulse` path with `get_astrbot_data_path() / plugin_data / self.name`; auto-migrate legacy data on startup
+
+### 📝 Documentation
+
+- Add batch add/remove examples and clarify command syntax in README
+- Fix license badge and link to match AGPL-3.0
+
+---
+
 ## v1.1.3 (2026-02-26)
 
 ### ✨ New Features
