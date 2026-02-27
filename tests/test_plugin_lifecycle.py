@@ -1,4 +1,4 @@
-"""Task 2.5: initialize() failure cleanup — no leaked tasks/session."""
+"""Tests initialize() failure cleanup — no leaked tasks or session."""
 
 from __future__ import annotations
 

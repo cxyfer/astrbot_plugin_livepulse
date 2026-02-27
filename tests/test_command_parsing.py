@@ -1,4 +1,4 @@
-"""Task 1.4: notify / end_notify argument parsing via _parse_batch_args."""
+"""Tests _parse_batch_args argument extraction for notify / end_notify commands."""
 
 from __future__ import annotations
 

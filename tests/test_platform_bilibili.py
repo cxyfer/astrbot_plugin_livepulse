@@ -1,4 +1,4 @@
-"""Task 4.5: Bilibili HTTP 429 → RateLimitError; non-429 → None; 200 → valid."""
+"""Tests Bilibili HTTP 429 → RateLimitError, non-429 → None, 200 → valid stream info."""
 
 from __future__ import annotations
 

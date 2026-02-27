@@ -1,4 +1,4 @@
-"""Task 5.6: YouTube concurrent polling with Semaphore."""
+"""Tests YouTube concurrent polling with Semaphore limiting."""
 
 from __future__ import annotations
 
