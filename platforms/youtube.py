@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 
 from aiohttp import ClientSession, ClientTimeout
@@ -33,18 +34,22 @@ class YouTubeChecker(BasePlatformChecker):
     async def check_status(
         self, channel_ids: list[str], session: ClientSession
     ) -> dict[str, StatusSnapshot]:
-        results: dict[str, StatusSnapshot] = {}
-        for cid in channel_ids:
-            try:
-                results[cid] = await self._check_single(cid, session)
-            except RateLimitError:
-                raise
-            except Exception as e:
-                logger.warning(f"YouTube check failed for {cid}: {e}")
-                results[cid] = StatusSnapshot(
-                    is_live=False, streamer_name=cid, success=False
-                )
-        return results
+        sem = asyncio.Semaphore(10)
+
+        async def _run_one(cid: str) -> tuple[str, StatusSnapshot]:
+            async with sem:
+                try:
+                    return cid, await self._check_single(cid, session)
+                except RateLimitError:
+                    raise
+                except Exception as e:
+                    logger.warning(f"YouTube check failed for {cid}: {e}")
+                    return cid, StatusSnapshot(
+                        is_live=False, streamer_name=cid, success=False
+                    )
+
+        pairs = await asyncio.gather(*(_run_one(cid) for cid in channel_ids))
+        return dict(pairs)
 
     async def _check_single(
         self, channel_id: str, session: ClientSession

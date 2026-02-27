@@ -81,8 +81,12 @@ class BilibiliChecker(BasePlatformChecker):
             async with session.get(
                 _ROOM_INFO_URL, params={"room_id": room_id}, timeout=self._timeout
             ) as resp:
+                if resp.status == 429:
+                    raise RateLimitError("bilibili")
                 resp.raise_for_status()
                 data = await resp.json()
+        except RateLimitError:
+            raise
         except Exception as e:
             logger.warning(f"Bilibili room resolve failed for {room_id}: {e}")
             return None
@@ -101,8 +105,12 @@ class BilibiliChecker(BasePlatformChecker):
             async with session.post(
                 _API_URL, json={"uids": [uid_int]}, timeout=self._timeout
             ) as resp:
+                if resp.status == 429:
+                    raise RateLimitError("bilibili")
                 resp.raise_for_status()
                 data = await resp.json()
+        except RateLimitError:
+            raise
         except Exception as e:
             logger.warning(f"Bilibili validate failed for {uid_str}: {e}")
             return None
