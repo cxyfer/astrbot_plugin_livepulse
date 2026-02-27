@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from core.models import StatusSnapshot
-from core.poller import PlatformPoller, _BACKOFF_BASE, _BACKOFF_MAX, _BACKOFF_MULT
+from core.poller import _BACKOFF_BASE, _BACKOFF_MAX, PlatformPoller
 
 
 def _make_poller() -> PlatformPoller:

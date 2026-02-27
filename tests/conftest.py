@@ -6,7 +6,6 @@ from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock
 
-
 # --- Stub classes for astrbot framework ---
 
 
