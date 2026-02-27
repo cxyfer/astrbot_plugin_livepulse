@@ -99,64 +99,81 @@ class LivePulsePlugin(Star):
     async def initialize(self) -> None:
         if self._initialized:
             return
-        self._initialized = True
 
         data = self._persistence.load()
         self._store.load(data)
 
-        self._session = aiohttp.ClientSession(
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        try:
+            self._session = aiohttp.ClientSession(
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                }
+            )
+
+            self._checkers["youtube"] = YouTubeChecker(
+                timeout=self.config.get("youtube_timeout", 20)
+            )
+            self._checkers["bilibili"] = BilibiliChecker(
+                timeout=self.config.get("bilibili_timeout", 10)
+            )
+
+            client_id = self.config.get("twitch_client_id", "")
+            client_secret = self.config.get("twitch_client_secret", "")
+            if client_id and client_secret:
+                self._checkers["twitch"] = TwitchChecker(
+                    client_id, client_secret, timeout=self.config.get("twitch_timeout", 10)
+                )
+
+            notifier = Notifier(
+                self.context,
+                self._store,
+                self._i18n,
+                include_thumbnail=self.config.get("include_thumbnail", True),
+            )
+            self._notifier = notifier
+
+            self._global_notify = self.config.get("enable_notifications", True)
+            self._global_end_notify = self.config.get("enable_end_notifications", True)
+            global_notify = self._global_notify
+            global_end_notify = self._global_end_notify
+
+            platform_intervals = {
+                "youtube": self.config.get("youtube_interval", 300),
+                "twitch": self.config.get("twitch_interval", 120),
+                "bilibili": self.config.get("bilibili_interval", 180),
             }
-        )
 
-        self._checkers["youtube"] = YouTubeChecker(
-            timeout=self.config.get("youtube_timeout", 20)
-        )
-        self._checkers["bilibili"] = BilibiliChecker(
-            timeout=self.config.get("bilibili_timeout", 10)
-        )
+            for name, checker in self._checkers.items():
+                poller = PlatformPoller(
+                    checker=checker,
+                    store=self._store,
+                    notifier=notifier,
+                    session=self._session,
+                    interval=platform_intervals[name],
+                    global_notify=global_notify,
+                    global_end_notify=global_end_notify,
+                )
+                self._pollers.append(poller)
+                self._poller_tasks.append(poller.start())
 
-        client_id = self.config.get("twitch_client_id", "")
-        client_secret = self.config.get("twitch_client_secret", "")
-        if client_id and client_secret:
-            self._checkers["twitch"] = TwitchChecker(
-                client_id, client_secret, timeout=self.config.get("twitch_timeout", 10)
-            )
-
-        notifier = Notifier(
-            self.context,
-            self._store,
-            self._i18n,
-            include_thumbnail=self.config.get("include_thumbnail", True),
-        )
-        self._notifier = notifier
-
-        self._global_notify = self.config.get("enable_notifications", True)
-        self._global_end_notify = self.config.get("enable_end_notifications", True)
-        global_notify = self._global_notify
-        global_end_notify = self._global_end_notify
-
-        platform_intervals = {
-            "youtube": self.config.get("youtube_interval", 300),
-            "twitch": self.config.get("twitch_interval", 120),
-            "bilibili": self.config.get("bilibili_interval", 180),
-        }
-
-        for name, checker in self._checkers.items():
-            poller = PlatformPoller(
-                checker=checker,
-                store=self._store,
-                notifier=notifier,
-                session=self._session,
-                interval=platform_intervals[name],
-                global_notify=global_notify,
-                global_end_notify=global_end_notify,
-            )
-            self._pollers.append(poller)
-            self._poller_tasks.append(poller.start())
-
-        logger.info(f"LivePulse initialized: {len(self._pollers)} pollers started")
+            self._initialized = True
+            logger.info(f"LivePulse initialized: {len(self._pollers)} pollers started")
+        except Exception:
+            for task in self._poller_tasks:
+                task.cancel()
+            for task in self._poller_tasks:
+                try:
+                    await task
+                except (asyncio.CancelledError, Exception):
+                    pass
+            if self._session and not self._session.closed:
+                await self._session.close()
+            self._pollers.clear()
+            self._poller_tasks.clear()
+            self._checkers.clear()
+            self._session = None
+            self._notifier = None
+            raise
 
     async def terminate(self) -> None:
         if self._terminated:
@@ -557,8 +574,8 @@ class LivePulsePlugin(Star):
 
     @live.command("notify")
     async def cmd_notify(self, event: AstrMessageEvent):
-        parts = event.message_str.strip().split()
-        arg = parts[1] if len(parts) > 1 else None
+        raw_args = self._parse_batch_args(event, "notify")
+        arg = raw_args[0] if raw_args else None
 
         if arg is None:
             origin = event.unified_msg_origin
@@ -593,8 +610,8 @@ class LivePulsePlugin(Star):
 
     @live.command("end_notify")
     async def cmd_end_notify(self, event: AstrMessageEvent):
-        parts = event.message_str.strip().split()
-        arg = parts[1] if len(parts) > 1 else None
+        raw_args = self._parse_batch_args(event, "end_notify")
+        arg = raw_args[0] if raw_args else None
 
         if arg is None:
             origin = event.unified_msg_origin
