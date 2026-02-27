@@ -157,16 +157,12 @@ class LivePulsePlugin(Star):
                 self._pollers.append(poller)
                 self._poller_tasks.append(poller.start())
 
-            self._initialized = True
             logger.info(f"LivePulse initialized: {len(self._pollers)} pollers started")
+            self._initialized = True
         except Exception:
             for task in self._poller_tasks:
                 task.cancel()
-            for task in self._poller_tasks:
-                try:
-                    await task
-                except (asyncio.CancelledError, Exception):
-                    pass
+            await asyncio.gather(*self._poller_tasks, return_exceptions=True)
             if self._session and not self._session.closed:
                 await self._session.close()
             self._pollers.clear()
@@ -183,19 +179,11 @@ class LivePulsePlugin(Star):
 
         for poller in self._pollers:
             poller.cancel()
-        for task in self._poller_tasks:
-            try:
-                await task
-            except (asyncio.CancelledError, Exception):
-                pass
+        await asyncio.gather(*self._poller_tasks, return_exceptions=True)
 
         for task in self._bg_tasks:
             task.cancel()
-        for task in list(self._bg_tasks):
-            try:
-                await task
-            except (asyncio.CancelledError, Exception):
-                pass
+        await asyncio.gather(*self._bg_tasks, return_exceptions=True)
         self._bg_tasks.clear()
 
         if self._session and not self._session.closed:
