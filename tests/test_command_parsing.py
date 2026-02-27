@@ -1,4 +1,5 @@
 """Task 1.4: notify / end_notify argument parsing via _parse_batch_args."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

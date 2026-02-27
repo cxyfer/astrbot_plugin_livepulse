@@ -1,4 +1,5 @@
 """Task 5.6: YouTube concurrent polling with Semaphore."""
+
 from __future__ import annotations
 
 import asyncio

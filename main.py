@@ -121,7 +121,9 @@ class LivePulsePlugin(Star):
             client_secret = self.config.get("twitch_client_secret", "")
             if client_id and client_secret:
                 self._checkers["twitch"] = TwitchChecker(
-                    client_id, client_secret, timeout=self.config.get("twitch_timeout", 10)
+                    client_id,
+                    client_secret,
+                    timeout=self.config.get("twitch_timeout", 10),
                 )
 
             notifier = Notifier(

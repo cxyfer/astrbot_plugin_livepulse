@@ -1,4 +1,5 @@
 """Task 2.5: initialize() failure cleanup — no leaked tasks/session."""
+
 from __future__ import annotations
 
 import asyncio
@@ -80,9 +81,10 @@ class TestInitFailureCleanup:
             original_notifier = MagicMock()
             return original_notifier
 
-        with patch("main.Notifier", side_effect=notifier_factory), patch(
-            "main.PlatformPoller"
-        ) as MockPoller:
+        with (
+            patch("main.Notifier", side_effect=notifier_factory),
+            patch("main.PlatformPoller") as MockPoller,
+        ):
             mock_task = AsyncMock()
             mock_task.done.return_value = False
             mock_task.cancel = MagicMock()

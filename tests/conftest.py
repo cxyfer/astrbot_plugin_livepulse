@@ -9,8 +9,10 @@ from unittest.mock import MagicMock
 
 # --- Stub classes for astrbot framework ---
 
+
 class _Star:
     """Minimal Star base class stub."""
+
     def __init__(self, context):
         self.context = context
 
@@ -21,28 +23,36 @@ class _Context:
 
 def _register(*args, **kwargs):
     """Passthrough decorator that returns the class unchanged."""
+
     def decorator(cls):
         return cls
+
     return decorator
 
 
 class _FilterNamespace:
     """Stub for filter.command_group / filter.command."""
+
     @staticmethod
     def command_group(name):
         def decorator(func):
             func._commands = {}
+
             def command(cmd_name):
                 def cmd_decorator(method):
                     func._commands[cmd_name] = method
                     return method
+
                 return cmd_decorator
+
             func.command = command
             return func
+
         return decorator
 
 
 # --- Mock DiscordEmbed ---
+
 
 class MockDiscordEmbed:
     def __init__(self, **kwargs):
@@ -56,7 +66,9 @@ _mock_discord_components.DiscordEmbed = MockDiscordEmbed
 sys.modules["astrbot.core.platform"] = MagicMock()
 sys.modules["astrbot.core.platform.sources"] = MagicMock()
 sys.modules["astrbot.core.platform.sources.discord"] = MagicMock()
-sys.modules["astrbot.core.platform.sources.discord.components"] = _mock_discord_components
+sys.modules["astrbot.core.platform.sources.discord.components"] = (
+    _mock_discord_components
+)
 
 # --- Build astrbot mock with real stubs ---
 
