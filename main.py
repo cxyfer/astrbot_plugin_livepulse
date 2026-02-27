@@ -73,11 +73,11 @@ def _migrate_legacy_data(new_dir: Path) -> None:
     "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.4"
 )
 class LivePulsePlugin(Star):
-    def __init__(self, context: Context, config: AstrBotConfig) -> None:
+    def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
-        self.config = config
+        self.config = config or {}
 
-        data_dir = get_astrbot_data_path() / "plugin_data" / self.name
+        data_dir = Path(get_astrbot_data_path()) / "plugin_data" / self.name
         _migrate_legacy_data(data_dir)
         self._persistence = PersistenceManager(data_dir)
         self._i18n = I18nManager(_PLUGIN_DIR / "i18n")
