@@ -69,7 +69,7 @@ def _migrate_legacy_data(new_dir: Path) -> None:
 
 
 @register(
-    "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.4"
+    "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.5"
 )
 class LivePulsePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:

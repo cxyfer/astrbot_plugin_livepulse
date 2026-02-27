@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.1.5 (2026-02-27)
+
+### 🐛 Bug Fixes
+
+- **Legacy loader compatibility**: make `config` param optional to support AstrBot's legacy plugin loader (context-only invocation)
+- **Lifecycle cleanup**: wrap `initialize()` in try/except to clean up resources on failure; move `_initialized` flag assignment after all side effects to allow safe retry
+- **Task cleanup**: replace manual cancel/await loops with `asyncio.gather(*tasks, return_exceptions=True)` in both failure path and `terminate()`
+- **Argument parsing**: unify `notify`/`end_notify` commands to use `_parse_batch_args` for consistent batch handling
+
+### ⚡️ Performance
+
+- **YouTube concurrent checks**: add semaphore-limited concurrent requests to avoid sequential bottleneck
+- **Bilibili rate limit**: handle HTTP 429 with `RateLimitError` propagation
+- **Channel-level backoff**: track per-channel failures and apply exponential backoff in poller
+
+### 🧪 Tests
+
+- Add unit tests covering argument parsing, lifecycle failure/retry, channel backoff, Bilibili 429 handling, and YouTube concurrency
+
+### ♻️ Refactoring
+
+- **Storage API**: replace `get_astrbot_data_path()` with `StarTools.get_data_dir` public API
+
+---
+
 ## v1.1.4 (2026-02-27)
 
 ### ♻️ Refactoring
