@@ -71,9 +71,17 @@ sys.modules["astrbot.core.platform.sources.discord.components"] = (
 
 # --- Build astrbot mock with real stubs ---
 
+class _StarTools:
+    @staticmethod
+    def get_data_dir(name: str):
+        return Path(_tempfile.mkdtemp()) / name
+
+
 _api_star_mod = ModuleType("astrbot.api.star")
+_api_star_mod.__path__ = []
 _api_star_mod.Star = _Star
 _api_star_mod.Context = _Context
+_api_star_mod.StarTools = _StarTools
 _api_star_mod.register = _register
 
 _api_event_mod = MagicMock()
@@ -81,6 +89,7 @@ _api_event_mod.filter = _FilterNamespace()
 _api_event_mod.AstrMessageEvent = MagicMock
 
 _api_mod = ModuleType("astrbot.api")
+_api_mod.__path__ = []
 _api_mod.logger = MagicMock()
 _api_mod.AstrBotConfig = dict
 _api_mod.event = _api_event_mod
@@ -88,6 +97,7 @@ _api_mod.star = _api_star_mod
 _api_mod.message_components = MagicMock()
 
 _astrbot_mod = ModuleType("astrbot")
+_astrbot_mod.__path__ = []
 _astrbot_mod.api = _api_mod
 
 sys.modules["astrbot"] = _astrbot_mod
@@ -98,8 +108,10 @@ sys.modules["astrbot.api.message_components"] = _api_mod.message_components
 
 # --- Mock astrbot.core.utils ---
 
-_mock_core = MagicMock()
-_mock_core_utils = MagicMock()
+_mock_core = ModuleType("astrbot.core")
+_mock_core.__path__ = []
+_mock_core_utils = ModuleType("astrbot.core.utils")
+_mock_core_utils.__path__ = []
 _mock_astrbot_path = MagicMock()
 _mock_astrbot_path.get_astrbot_data_path = lambda: _tempfile.mkdtemp()
 sys.modules["astrbot.core"] = _mock_core
