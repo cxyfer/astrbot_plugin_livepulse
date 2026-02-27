@@ -71,6 +71,7 @@ sys.modules["astrbot.core.platform.sources.discord.components"] = (
 
 # --- Build astrbot mock with real stubs ---
 
+
 class _StarTools:
     @staticmethod
     def get_data_dir(name: str):
