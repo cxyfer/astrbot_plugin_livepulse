@@ -138,6 +138,12 @@ class PlatformPoller:
         async with self._store.lock:
             for channel_id, status in statuses.items():
                 if not status.success:
+                    failures = self._channel_failures.get(channel_id, 0) + 1
+                    self._channel_failures[channel_id] = failures
+                    delay = min(
+                        _BACKOFF_BASE * (_BACKOFF_MULT ** (failures - 1)), _BACKOFF_MAX
+                    )
+                    self._channel_backoff_until[channel_id] = time.time() + delay
                     continue
 
                 self._channel_failures.pop(channel_id, None)

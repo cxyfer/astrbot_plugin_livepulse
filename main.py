@@ -9,8 +9,7 @@ from urllib.parse import unquote, urlparse
 import aiohttp
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.star import Context, Star, register
-from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+from astrbot.api.star import Context, Star, StarTools, register
 
 # Ensure plugin root is on sys.path for relative imports
 _PLUGIN_DIR = Path(__file__).resolve().parent
@@ -73,11 +72,11 @@ def _migrate_legacy_data(new_dir: Path) -> None:
     "astrbot_plugin_livepulse", "Xyfer", "Multi-platform live stream monitor", "1.1.4"
 )
 class LivePulsePlugin(Star):
-    def __init__(self, context: Context, config: AstrBotConfig) -> None:
+    def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
-        self.config = config
+        self.config = config or {}
 
-        data_dir = get_astrbot_data_path() / "plugin_data" / self.name
+        data_dir = StarTools.get_data_dir(self.name)
         _migrate_legacy_data(data_dir)
         self._persistence = PersistenceManager(data_dir)
         self._i18n = I18nManager(_PLUGIN_DIR / "i18n")
@@ -99,64 +98,79 @@ class LivePulsePlugin(Star):
     async def initialize(self) -> None:
         if self._initialized:
             return
-        self._initialized = True
 
         data = self._persistence.load()
         self._store.load(data)
 
-        self._session = aiohttp.ClientSession(
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        try:
+            self._session = aiohttp.ClientSession(
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                }
+            )
+
+            self._checkers["youtube"] = YouTubeChecker(
+                timeout=self.config.get("youtube_timeout", 20)
+            )
+            self._checkers["bilibili"] = BilibiliChecker(
+                timeout=self.config.get("bilibili_timeout", 10)
+            )
+
+            client_id = self.config.get("twitch_client_id", "")
+            client_secret = self.config.get("twitch_client_secret", "")
+            if client_id and client_secret:
+                self._checkers["twitch"] = TwitchChecker(
+                    client_id,
+                    client_secret,
+                    timeout=self.config.get("twitch_timeout", 10),
+                )
+
+            notifier = Notifier(
+                self.context,
+                self._store,
+                self._i18n,
+                include_thumbnail=self.config.get("include_thumbnail", True),
+            )
+            self._notifier = notifier
+
+            self._global_notify = self.config.get("enable_notifications", True)
+            self._global_end_notify = self.config.get("enable_end_notifications", True)
+            global_notify = self._global_notify
+            global_end_notify = self._global_end_notify
+
+            platform_intervals = {
+                "youtube": self.config.get("youtube_interval", 300),
+                "twitch": self.config.get("twitch_interval", 120),
+                "bilibili": self.config.get("bilibili_interval", 180),
             }
-        )
 
-        self._checkers["youtube"] = YouTubeChecker(
-            timeout=self.config.get("youtube_timeout", 20)
-        )
-        self._checkers["bilibili"] = BilibiliChecker(
-            timeout=self.config.get("bilibili_timeout", 10)
-        )
+            for name, checker in self._checkers.items():
+                poller = PlatformPoller(
+                    checker=checker,
+                    store=self._store,
+                    notifier=notifier,
+                    session=self._session,
+                    interval=platform_intervals[name],
+                    global_notify=global_notify,
+                    global_end_notify=global_end_notify,
+                )
+                self._pollers.append(poller)
+                self._poller_tasks.append(poller.start())
 
-        client_id = self.config.get("twitch_client_id", "")
-        client_secret = self.config.get("twitch_client_secret", "")
-        if client_id and client_secret:
-            self._checkers["twitch"] = TwitchChecker(
-                client_id, client_secret, timeout=self.config.get("twitch_timeout", 10)
-            )
-
-        notifier = Notifier(
-            self.context,
-            self._store,
-            self._i18n,
-            include_thumbnail=self.config.get("include_thumbnail", True),
-        )
-        self._notifier = notifier
-
-        self._global_notify = self.config.get("enable_notifications", True)
-        self._global_end_notify = self.config.get("enable_end_notifications", True)
-        global_notify = self._global_notify
-        global_end_notify = self._global_end_notify
-
-        platform_intervals = {
-            "youtube": self.config.get("youtube_interval", 300),
-            "twitch": self.config.get("twitch_interval", 120),
-            "bilibili": self.config.get("bilibili_interval", 180),
-        }
-
-        for name, checker in self._checkers.items():
-            poller = PlatformPoller(
-                checker=checker,
-                store=self._store,
-                notifier=notifier,
-                session=self._session,
-                interval=platform_intervals[name],
-                global_notify=global_notify,
-                global_end_notify=global_end_notify,
-            )
-            self._pollers.append(poller)
-            self._poller_tasks.append(poller.start())
-
-        logger.info(f"LivePulse initialized: {len(self._pollers)} pollers started")
+            logger.info(f"LivePulse initialized: {len(self._pollers)} pollers started")
+            self._initialized = True
+        except Exception:
+            for task in self._poller_tasks:
+                task.cancel()
+            await asyncio.gather(*self._poller_tasks, return_exceptions=True)
+            if self._session and not self._session.closed:
+                await self._session.close()
+            self._pollers.clear()
+            self._poller_tasks.clear()
+            self._checkers.clear()
+            self._session = None
+            self._notifier = None
+            raise
 
     async def terminate(self) -> None:
         if self._terminated:
@@ -165,19 +179,11 @@ class LivePulsePlugin(Star):
 
         for poller in self._pollers:
             poller.cancel()
-        for task in self._poller_tasks:
-            try:
-                await task
-            except (asyncio.CancelledError, Exception):
-                pass
+        await asyncio.gather(*self._poller_tasks, return_exceptions=True)
 
         for task in self._bg_tasks:
             task.cancel()
-        for task in list(self._bg_tasks):
-            try:
-                await task
-            except (asyncio.CancelledError, Exception):
-                pass
+        await asyncio.gather(*self._bg_tasks, return_exceptions=True)
         self._bg_tasks.clear()
 
         if self._session and not self._session.closed:
@@ -557,8 +563,8 @@ class LivePulsePlugin(Star):
 
     @live.command("notify")
     async def cmd_notify(self, event: AstrMessageEvent):
-        parts = event.message_str.strip().split()
-        arg = parts[1] if len(parts) > 1 else None
+        raw_args = self._parse_batch_args(event, "notify")
+        arg = raw_args[0] if raw_args else None
 
         if arg is None:
             origin = event.unified_msg_origin
@@ -593,8 +599,8 @@ class LivePulsePlugin(Star):
 
     @live.command("end_notify")
     async def cmd_end_notify(self, event: AstrMessageEvent):
-        parts = event.message_str.strip().split()
-        arg = parts[1] if len(parts) > 1 else None
+        raw_args = self._parse_batch_args(event, "end_notify")
+        arg = raw_args[0] if raw_args else None
 
         if arg is None:
             origin = event.unified_msg_origin
