@@ -9,8 +9,7 @@ from urllib.parse import unquote, urlparse
 import aiohttp
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.star import Context, Star, register
-from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+from astrbot.api.star import Context, Star, StarTools, register
 
 # Ensure plugin root is on sys.path for relative imports
 _PLUGIN_DIR = Path(__file__).resolve().parent
@@ -77,7 +76,7 @@ class LivePulsePlugin(Star):
         super().__init__(context)
         self.config = config or {}
 
-        data_dir = Path(get_astrbot_data_path()) / "plugin_data" / self.name
+        data_dir = StarTools.get_data_dir(self.name)
         _migrate_legacy_data(data_dir)
         self._persistence = PersistenceManager(data_dir)
         self._i18n = I18nManager(_PLUGIN_DIR / "i18n")
