@@ -200,8 +200,15 @@ class Notifier:
             return f"@{name}"
 
         if platform == "twitch":
-            if login_name and name.lower() != login_name.lower():
-                return f"{name} (@{login_name})"
+            account_id = login_name or display_id
+            if account_id and name.lower() != account_id.lower():
+                return f"{name} (@{account_id})"
+            return name
+
+        if platform == "youtube":
+            account_id = display_id
+            if account_id:
+                return f"{name} (@{account_id})"
             return name
 
         return name
