@@ -20,7 +20,7 @@ def _make_plugin():
         "bilibili_interval": 180,
         "enable_notifications": True,
         "enable_end_notifications": True,
-        "include_thumbnail": True,
+        "include_image": True,
         "default_language": "en",
     }
     plugin._checkers = {}

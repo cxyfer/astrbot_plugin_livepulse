@@ -188,3 +188,69 @@ class TestBuildEndEmbedFooter:
         )
         embed = chain.chain[0]
         assert embed.footer == "日本語配信者 (@japanese_streamer)"
+
+
+class TestEmbedImageField:
+    """Tests for image_url field mapping in live embed."""
+
+    @pytest.fixture
+    def notifier(self, monkeypatch):
+        class MockContext:
+            pass
+
+        class MockStore:
+            def get_language(self, origin: str) -> str:
+                return "en"
+
+        class MockI18n:
+            def get(self, lang: str, key: str, **kwargs) -> str:
+                return key
+
+        class MockDiscordEmbed:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+        class MockMessageChain:
+            def __init__(self, chain):
+                self.chain = chain
+
+        import core.notifier as notifier_module
+
+        monkeypatch.setattr(notifier_module, "DiscordEmbed", MockDiscordEmbed)
+        monkeypatch.setattr(notifier_module, "MessageChain", MockMessageChain)
+        return Notifier(MockContext(), MockStore(), MockI18n())
+
+    def test_live_embed_uses_image_field(self, notifier: Notifier):
+        """Live embed should set image to snapshot.image_url and thumbnail to None."""
+        snapshot = StatusSnapshot(
+            is_live=True,
+            streamer_name="TestStreamer",
+            image_url="https://example.com/thumbnail.jpg",
+        )
+        chain = notifier._build_live_embed("en", "twitch", snapshot)
+        embed = chain.chain[0]
+        assert embed.image == snapshot.image_url
+        assert embed.thumbnail is None
+
+    def test_twitch_resolution_1280x720(self, notifier: Notifier):
+        """Twitch image_url should contain 1280x720 after template substitution."""
+        raw_template = "https://static-cdn.jtvnw.net/previews-ttv/live_user_ninja-{width}x{height}.jpg"
+        resolved = raw_template.replace("{width}", "1280").replace("{height}", "720")
+        snapshot = StatusSnapshot(
+            is_live=True,
+            streamer_name="Ninja",
+            image_url=resolved,
+        )
+        assert "1280x720" in snapshot.image_url
+
+    def test_youtube_hqdefault_url(self, notifier: Notifier):
+        """YouTube image_url should match the hqdefault.jpg pattern."""
+        video_id = "dQw4w9WgXcQ"
+        image_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+        snapshot = StatusSnapshot(
+            is_live=True,
+            streamer_name="RickAstley",
+            image_url=image_url,
+        )
+        assert "hqdefault.jpg" in snapshot.image_url
