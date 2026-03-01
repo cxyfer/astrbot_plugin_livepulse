@@ -11,13 +11,10 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, StarTools, register
 
-# Ensure plugin root is on sys.path and its core modules are not shadowed by cache
+# Ensure plugin root is on sys.path for relative imports
 _PLUGIN_DIR = Path(__file__).resolve().parent
 if str(_PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_DIR))
-for _k in [k for k in sys.modules if k == "core" or k.startswith("core.")]:
-    if str(_PLUGIN_DIR) not in str(getattr(sys.modules.get(_k), "__file__", "") or ""):
-        sys.modules.pop(_k, None)
 
 from core.batch import (
     MAX_BATCH_SIZE,
