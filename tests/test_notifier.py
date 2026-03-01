@@ -79,14 +79,15 @@ class TestFormatStreamerName:
         assert result == "ScottyBVB"
         assert "(@" not in result
 
-    def test_default_platform(self, notifier: Notifier):
-        """Unknown platform should return streamer_name as-is."""
+    def test_youtube_format_with_handle(self, notifier: Notifier):
+        """YouTube should include handle when display_id is available."""
         snapshot = StatusSnapshot(
             is_live=True,
             streamer_name="TestUser",
+            display_id="@TestUser",
         )
         result = notifier._format_streamer_name("youtube", snapshot)
-        assert result == "TestUser"
+        assert result == "TestUser (@TestUser)"
 
     def test_empty_streamer_name(self, notifier: Notifier):
         """Empty streamer_name should return empty string."""
