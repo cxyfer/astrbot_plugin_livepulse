@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.6 (2026-03-01)
+
+### 🐛 Bug Fixes
+
+- **Channel name formatting**: restore `@handle` display for YouTube channels and fix Twitch fallback to use `login_name` or `display_id` when display name differs
+
+---
+
 ## v1.1.5 (2026-02-27)
 
 ### 🐛 Bug Fixes
