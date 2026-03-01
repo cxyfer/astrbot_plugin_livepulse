@@ -48,12 +48,12 @@ class TestFormatStreamerName:
         """Twitch with same display and login name should not show (@login)."""
         snapshot = StatusSnapshot(
             is_live=True,
-            streamer_name="ScottyBVB",
-            display_id="scottybvb",
-            login_name="scottybvb",
+            streamer_name="Ninja",
+            display_id="ninja",
+            login_name="ninja",
         )
         result = notifier._format_streamer_name("twitch", snapshot)
-        assert result == "ScottyBVB"
+        assert result == "Ninja"
         assert "(@" not in result
 
     def test_twitch_different_name(self, notifier: Notifier):
@@ -71,12 +71,12 @@ class TestFormatStreamerName:
         """Twitch names differing only by case should be treated as same."""
         snapshot = StatusSnapshot(
             is_live=True,
-            streamer_name="ScottyBVB",
-            display_id="ScottyBVB",
-            login_name="scottybvb",
+            streamer_name="Ninja",
+            display_id="Ninja",
+            login_name="ninja",
         )
         result = notifier._format_streamer_name("twitch", snapshot)
-        assert result == "ScottyBVB"
+        assert result == "Ninja"
         assert "(@" not in result
 
     def test_youtube_format_with_handle(self, notifier: Notifier):
@@ -176,9 +176,9 @@ class TestBuildEndEmbedFooter:
 
     def test_twitch_end_footer_same_name(self, notifier: Notifier):
         """Twitch end notification with same names should not show (@login)."""
-        chain = notifier._build_end_embed("en", "twitch", "ScottyBVB", "scottybvb")
+        chain = notifier._build_end_embed("en", "twitch", "Ninja", "ninja")
         embed = chain.chain[0]
-        assert embed.footer == "ScottyBVB"
+        assert embed.footer == "Ninja"
         assert "(@" not in embed.footer
 
     def test_twitch_end_footer_different_name(self, notifier: Notifier):
