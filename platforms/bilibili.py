@@ -65,7 +65,7 @@ class BilibiliChecker(BasePlatformChecker):
                     stream_id=room_id if is_live else "",
                     title=info.get("title", ""),
                     category=info.get("area_v2_name", ""),
-                    thumbnail_url=info.get("cover_from_user", ""),
+                    image_url=info.get("cover_from_user", ""),
                     streamer_name=info.get("uname", uid),
                     stream_url=f"https://live.bilibili.com/{room_id}"
                     if room_id

@@ -92,8 +92,8 @@ class TwitchChecker(BasePlatformChecker):
                     continue
                 thumb = (
                     stream.get("thumbnail_url", "")
-                    .replace("{width}", "640")
-                    .replace("{height}", "360")
+                    .replace("{width}", "1280")
+                    .replace("{height}", "720")
                 )
                 user_login = (stream.get("user_login") or uid).lower()
                 results[uid] = StatusSnapshot(
@@ -101,7 +101,7 @@ class TwitchChecker(BasePlatformChecker):
                     stream_id=stream.get("id", ""),
                     title=stream.get("title", ""),
                     category=stream.get("game_name", ""),
-                    thumbnail_url=thumb,
+                    image_url=thumb,
                     streamer_name=stream.get("user_name", uid),
                     stream_url=f"https://www.twitch.tv/{uid}",
                     display_id=user_login,

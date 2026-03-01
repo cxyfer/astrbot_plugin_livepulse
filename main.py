@@ -11,10 +11,13 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, StarTools, register
 
-# Ensure plugin root is on sys.path for relative imports
+# Ensure plugin root is on sys.path and its core modules are not shadowed by cache
 _PLUGIN_DIR = Path(__file__).resolve().parent
 if str(_PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_DIR))
+for _k in [k for k in sys.modules if k == "core" or k.startswith("core.")]:
+    if str(_PLUGIN_DIR) not in str(getattr(sys.modules.get(_k), "__file__", "") or ""):
+        sys.modules.pop(_k, None)
 
 from core.batch import (
     MAX_BATCH_SIZE,
@@ -129,7 +132,9 @@ class LivePulsePlugin(Star):
                 self.context,
                 self._store,
                 self._i18n,
-                include_thumbnail=self.config.get("include_thumbnail", True),
+                include_image=self.config.get(
+                    "include_image", self.config.get("include_thumbnail", True)
+                ),
             )
             self._notifier = notifier
 
@@ -723,7 +728,7 @@ class LivePulsePlugin(Star):
                 title="Test Stream Title",
                 category="Just Chatting",
                 stream_url="https://example.com/test",
-                thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
+                image_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
                 display_id="TestStreamer",
             )
             await self._notifier.send_live_notification(

@@ -47,7 +47,7 @@ class StatusSnapshot:
     stream_id: str = ""
     title: str = ""
     category: str = ""
-    thumbnail_url: str = ""
+    image_url: str = ""
     streamer_name: str = ""
     stream_url: str = ""
     success: bool = True
