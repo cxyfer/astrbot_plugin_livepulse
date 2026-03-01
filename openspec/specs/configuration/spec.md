@@ -61,10 +61,10 @@ The system SHALL provide `enable_notifications` (bool, default true) and `enable
 - **THEN** no end-of-stream notifications SHALL be sent to any group
 
 ### Requirement: Cover thumbnail toggle
-The system SHALL provide `include_thumbnail` (bool, default true).
+The system SHALL provide `include_image` (bool, default true).
 
 #### Scenario: Thumbnail disabled
-- **WHEN** `include_thumbnail` is false
+- **WHEN** `include_image` is false
 - **THEN** notifications SHALL be sent as text-only without cover images
 
 ### Requirement: HTTP timeout configuration
