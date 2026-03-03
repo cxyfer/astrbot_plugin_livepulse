@@ -233,24 +233,3 @@ class TestEmbedImageField:
         assert embed.image == snapshot.image_url
         assert embed.thumbnail is None
 
-    def test_twitch_resolution_1280x720(self, notifier: Notifier):
-        """Twitch image_url should contain 1280x720 after template substitution."""
-        raw_template = "https://static-cdn.jtvnw.net/previews-ttv/live_user_ninja-{width}x{height}.jpg"
-        resolved = raw_template.replace("{width}", "1280").replace("{height}", "720")
-        snapshot = StatusSnapshot(
-            is_live=True,
-            streamer_name="Ninja",
-            image_url=resolved,
-        )
-        assert "1280x720" in snapshot.image_url
-
-    def test_youtube_hqdefault_url(self, notifier: Notifier):
-        """YouTube image_url should match the hqdefault.jpg pattern."""
-        video_id = "dQw4w9WgXcQ"
-        image_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-        snapshot = StatusSnapshot(
-            is_live=True,
-            streamer_name="RickAstley",
-            image_url=image_url,
-        )
-        assert "hqdefault.jpg" in snapshot.image_url
