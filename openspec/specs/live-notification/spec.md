@@ -4,7 +4,7 @@
 TBD - created by archiving change livepulse-plugin. Update Purpose after archive.
 ## Requirements
 ### Requirement: Live-start notification content
-The system SHALL send a notification when a monitored streamer goes live. The notification MUST include: streamer name, stream title, category (if available), stream link, and cover image image. The notification text SHALL begin with 🟢 emoji. The `notify.live_start` i18n template SHALL use 🟢 as the leading emoji across all language files.
+The system SHALL send a notification when a monitored streamer goes live. The notification MUST include: streamer name, stream title, category (if available), stream link, and cover image. The notification text SHALL begin with 🟢 emoji. The `notify.live_start` i18n template SHALL use 🟢 as the leading emoji across all language files.
 
 When the notification target is a Discord platform, the system SHALL send a `DiscordEmbed` component instead of plain text. The Embed SHALL include:
 - **title**: Rendered from `notify.embed.live_title` i18n key with `{name}` placeholder substituted by `streamer_name`. The streamer name SHALL be truncated with trailing `…` if the resulting title would exceed 256 characters.
