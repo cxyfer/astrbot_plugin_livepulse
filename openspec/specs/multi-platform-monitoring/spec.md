@@ -17,7 +17,7 @@ Out of scope: `/user/`, `/c/`, `youtu.be` URL formats (C7).
 #### Scenario: Detect YouTube channel going live
 - **WHEN** the YouTube poller scrapes a monitored channel's `/live` page
 - **AND** the HTML contains `"isLive":true` or `hqdefault_live.jpg`
-- **THEN** the system SHALL report the channel as live with extracted title, thumbnail URL, and `success = True`
+- **THEN** the system SHALL report the channel as live with extracted title, image URL, and `success = True`
 
 #### Scenario: YouTube channel not live
 - **WHEN** the YouTube poller scrapes a monitored channel's `/live` page
@@ -100,7 +100,7 @@ No new HTTP calls SHALL be introduced.
 #### Scenario: Detect Twitch channel going live
 - **WHEN** the Twitch poller queries the Helix API for a monitored username
 - **AND** the `data` array is non-empty
-- **THEN** the system SHALL report the channel as live with `title`, `game_name`, `thumbnail_url`, `user_name`, and `success = True`
+- **THEN** the system SHALL report the channel as live with `title`, `game_name`, `image_url`, `user_name`, and `success = True`
 
 #### Scenario: Twitch channel not live
 - **WHEN** the Twitch poller queries the Helix API

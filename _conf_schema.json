@@ -49,8 +49,8 @@
     "type": "bool",
     "default": true
   },
-  "include_thumbnail": {
-    "description": "Include cover thumbnail in notifications",
+  "include_image": {
+    "description": "Include cover image in notifications",
     "type": "bool",
     "default": true
   },

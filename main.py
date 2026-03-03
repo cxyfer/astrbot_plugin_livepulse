@@ -129,7 +129,9 @@ class LivePulsePlugin(Star):
                 self.context,
                 self._store,
                 self._i18n,
-                include_thumbnail=self.config.get("include_thumbnail", True),
+                include_image=self.config.get(
+                    "include_image", self.config.get("include_thumbnail", True)
+                ),
             )
             self._notifier = notifier
 
@@ -723,7 +725,7 @@ class LivePulsePlugin(Star):
                 title="Test Stream Title",
                 category="Just Chatting",
                 stream_url="https://example.com/test",
-                thumbnail_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
+                image_url="https://placehold.co/1280x720/orange/white?text=LivePulse+Test",
                 display_id="TestStreamer",
             )
             await self._notifier.send_live_notification(

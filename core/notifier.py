@@ -26,12 +26,12 @@ class Notifier:
         context: Context,
         store: Store,
         i18n: I18nManager,
-        include_thumbnail: bool = True,
+        include_image: bool = True,
     ) -> None:
         self._ctx = context
         self._store = store
         self._i18n = i18n
-        self._include_thumbnail = include_thumbnail
+        self._include_image = include_image
 
     async def send_live_notification(
         self,
@@ -66,7 +66,7 @@ class Notifier:
             category=snapshot.category or "",
             url=snapshot.stream_url,
         )
-        await self._deliver(origin, text, snapshot.thumbnail_url, track_failure=track)
+        await self._deliver(origin, text, snapshot.image_url, track_failure=track)
 
     async def send_end_notification(
         self,
@@ -97,7 +97,7 @@ class Notifier:
         text = self._i18n.get(
             lang, "notify.live_end", name=streamer_name, platform=platform
         )
-        await self._deliver(origin, text, thumbnail_url="", track_failure=track)
+        await self._deliver(origin, text, image_url="", track_failure=track)
 
     def _should_notify(
         self,
@@ -118,11 +118,11 @@ class Notifier:
         return True
 
     async def _deliver(
-        self, origin: str, text: str, thumbnail_url: str, *, track_failure: bool = True
+        self, origin: str, text: str, image_url: str, *, track_failure: bool = True
     ) -> None:
-        if self._include_thumbnail and thumbnail_url:
+        if self._include_image and image_url:
             chain = MessageChain(
-                chain=[Comp.Plain(text), Comp.Image.fromURL(thumbnail_url)]
+                chain=[Comp.Plain(text), Comp.Image.fromURL(image_url)]
             )
             if await self._send_chain(origin, chain, track_failure=track_failure):
                 return
@@ -251,8 +251,8 @@ class Notifier:
             description=snapshot.title,
             color=0x57F287,
             url=stream_url if stream_url and stream_url.strip() else None,
-            thumbnail=snapshot.thumbnail_url or None,
-            image=None,
+            thumbnail=None,
+            image=snapshot.image_url or None,
             footer=footer,
             fields=fields,
         )

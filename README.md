@@ -50,7 +50,7 @@ After installation, configure in AstrBot WebUI:
 | `max_global_channels` | int | `500` | Max unique channels globally |
 | `enable_notifications` | bool | `true` | Global live-start notifications |
 | `enable_end_notifications` | bool | `true` | Global end-of-stream notifications |
-| `include_thumbnail` | bool | `true` | Include thumbnail in notifications |
+| `include_image` | bool | `true` | Include cover image in notifications |
 
 > [!IMPORTANT]
 > Twitch account must have **Two-Factor Authentication (2FA)** enabled before creating an application.

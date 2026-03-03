@@ -80,7 +80,6 @@ class YouTubeChecker(BasePlatformChecker):
         search_pos = 0
         video_id = ""
         title = ""
-        thumb = ""
 
         while True:
             live_pos = html.find(live_marker, search_pos)
@@ -110,12 +109,6 @@ class YouTubeChecker(BasePlatformChecker):
             if title_match:
                 title = title_match.group(1)
 
-            thumb_match = re.search(
-                r'"thumbnail"\s*:\s*\{\s*"thumbnails"\s*:\s*\[\s*\{[^}]*"url"\s*:\s*"([^"]+)"',
-                renderer,
-            )
-            if thumb_match:
-                thumb = thumb_match.group(1)
             break
 
         if not video_id:
@@ -124,12 +117,13 @@ class YouTubeChecker(BasePlatformChecker):
             )
 
         stream_url = f"https://www.youtube.com/watch?v={video_id}"
+        image_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
 
         return StatusSnapshot(
             is_live=True,
             stream_id=video_id,
             title=title,
-            thumbnail_url=thumb,
+            image_url=image_url,
             streamer_name=name,
             stream_url=stream_url,
             display_id=display_id,
