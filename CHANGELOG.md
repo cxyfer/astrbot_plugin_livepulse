@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.7 (2026-03-16)
+
+### 🐛 Bug Fixes
+
+- **Image setting persistence**: preserve the saved notification image toggle across plugin updates by migrating legacy `include_thumbnail` values to `include_image`
+
+### ♻️ Refactoring
+
+- **Image field**: rename `thumbnail_url` to `image_url` and upgrade live stream notification image quality for Discord embeds and platform snapshots
+
+---
+
 ## v1.1.6 (2026-03-01)
 
 ### 🐛 Bug Fixes
