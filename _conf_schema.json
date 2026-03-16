@@ -54,6 +54,18 @@
     "type": "bool",
     "default": true
   },
+  "include_thumbnail": {
+    "description": "Legacy compatibility key for include_image",
+    "type": "bool",
+    "default": true,
+    "invisible": true
+  },
+  "include_image_migrated": {
+    "description": "Internal migration flag for include_image compatibility",
+    "type": "bool",
+    "default": false,
+    "invisible": true
+  },
   "youtube_timeout": {
     "description": "YouTube HTTP request timeout (seconds)",
     "type": "int",

@@ -8,6 +8,23 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+class _SaveableConfig(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.save_calls = 0
+
+    def save_config(self):
+        self.save_calls += 1
+
+
+def _build_plugin_with_config(config):
+    from main import LivePulsePlugin
+
+    LivePulsePlugin.name = "astrbot_plugin_livepulse"
+    with patch("main._migrate_legacy_data"):
+        return LivePulsePlugin(MagicMock(), config)
+
+
 def _make_plugin():
     from main import LivePulsePlugin
 
@@ -110,3 +127,35 @@ class TestInitFailureCleanup:
                     await t
                 except (asyncio.CancelledError, Exception):
                     pass
+
+
+class TestConfigMigration:
+    def test_migrate_legacy_include_thumbnail_value(self):
+        config = _SaveableConfig({"include_thumbnail": False})
+
+        plugin = _build_plugin_with_config(config)
+
+        assert plugin.config["include_image"] is False
+        assert plugin.config["include_thumbnail"] is False
+        assert plugin.config["include_image_migrated"] is True
+        assert config.save_calls == 1
+
+    def test_migration_does_not_override_later_user_change(self):
+        config = _SaveableConfig(
+            {"include_thumbnail": False, "include_image": True}
+        )
+
+        _build_plugin_with_config(config)
+
+        assert config["include_image"] is False
+        assert config["include_thumbnail"] is False
+        assert config["include_image_migrated"] is True
+        assert config.save_calls == 1
+
+        config["include_image"] = True
+        _build_plugin_with_config(config)
+
+        assert config["include_image"] is True
+        assert config["include_thumbnail"] is True
+        assert config["include_image_migrated"] is True
+        assert config.save_calls == 2

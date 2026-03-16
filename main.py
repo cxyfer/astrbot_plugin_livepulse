@@ -58,6 +58,10 @@ def _detect_platform(raw: str) -> str | None:
 
 
 _LEGACY_DATA_PATH = Path.home() / ".astrbot" / "livepulse"
+_LEGACY_INCLUDE_IMAGE_KEY = "include_thumbnail"
+_INCLUDE_IMAGE_KEY = "include_image"
+_INCLUDE_IMAGE_MIGRATION_KEY = "include_image_migrated"
+_INCLUDE_IMAGE_DEFAULT = True
 
 
 def _migrate_legacy_data(new_dir: Path) -> None:
@@ -75,13 +79,14 @@ class LivePulsePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
         self.config = config or {}
+        self._migrate_include_image_config()
 
         data_dir = StarTools.get_data_dir(self.name)
         _migrate_legacy_data(data_dir)
         self._persistence = PersistenceManager(data_dir)
         self._i18n = I18nManager(_PLUGIN_DIR / "i18n")
         self._store = Store(
-            self._persistence, default_language=config.get("default_language", "en")
+            self._persistence, default_language=self.config.get("default_language", "en")
         )
 
         self._checkers: dict[str, YouTubeChecker | TwitchChecker | BilibiliChecker] = {}
@@ -130,7 +135,8 @@ class LivePulsePlugin(Star):
                 self._store,
                 self._i18n,
                 include_image=self.config.get(
-                    "include_image", self.config.get("include_thumbnail", True)
+                    _INCLUDE_IMAGE_KEY,
+                    self.config.get(_LEGACY_INCLUDE_IMAGE_KEY, _INCLUDE_IMAGE_DEFAULT),
                 ),
             )
             self._notifier = notifier
@@ -197,6 +203,49 @@ class LivePulsePlugin(Star):
         logger.info("LivePulse terminated")
 
     # --- helpers ---
+
+    def _save_plugin_config(self) -> None:
+        save_config = getattr(self.config, "save_config", None)
+        if callable(save_config):
+            save_config()
+
+    def _migrate_include_image_config(self) -> None:
+        if not isinstance(self.config, dict):
+            return
+
+        legacy_present = _LEGACY_INCLUDE_IMAGE_KEY in self.config
+        if not legacy_present:
+            return
+
+        legacy_value = bool(
+            self.config.get(_LEGACY_INCLUDE_IMAGE_KEY, _INCLUDE_IMAGE_DEFAULT)
+        )
+        new_present = _INCLUDE_IMAGE_KEY in self.config
+        migrated = bool(self.config.get(_INCLUDE_IMAGE_MIGRATION_KEY, False))
+        changed = False
+
+        if not new_present:
+            self.config[_INCLUDE_IMAGE_KEY] = legacy_value
+            new_value = legacy_value
+            changed = True
+        else:
+            new_value = bool(self.config.get(_INCLUDE_IMAGE_KEY, _INCLUDE_IMAGE_DEFAULT))
+            if not migrated and new_value == _INCLUDE_IMAGE_DEFAULT:
+                if legacy_value != _INCLUDE_IMAGE_DEFAULT:
+                    self.config[_INCLUDE_IMAGE_KEY] = legacy_value
+                    new_value = legacy_value
+                    changed = True
+
+        if not migrated:
+            self.config[_INCLUDE_IMAGE_MIGRATION_KEY] = True
+            changed = True
+
+        if self.config.get(_LEGACY_INCLUDE_IMAGE_KEY) != new_value:
+            self.config[_LEGACY_INCLUDE_IMAGE_KEY] = new_value
+            changed = True
+
+        if changed:
+            self._save_plugin_config()
 
     def _lang(self, event: AstrMessageEvent) -> str:
         return self._store.get_language(event.unified_msg_origin)
